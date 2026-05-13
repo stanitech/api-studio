@@ -1,6 +1,6 @@
 # 📡 API Docs — Laravel + Ollama
 
-> Dynamic API Documentation Generator with AI-powered summaries using Ollama, built on Laravel 11.
+> Dynamic API Documentation Generator with AI-powered summaries using Ollama, built on Laravel 13.
 
 ---
 
@@ -21,7 +21,7 @@
 
 | Tool | Version |
 |------|---------|
-| PHP  | ≥ 8.2   |
+| PHP  | ≥ 8.3   |
 | Composer | latest |
 | Ollama | latest |
 
