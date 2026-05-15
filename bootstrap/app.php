@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CompressHtml;
 use App\Http\Middleware\CorsMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,23 +14,32 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(CorsMiddleware::class);
-        $middleware->api(remove: [
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+
+        // Enable sessions on API routes so Auth::login() works
+        $middleware->api(append: [
+            \Illuminate\Cookie\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+        ]);
+
+        $middleware->web(append: [
+            CompressHtml::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Illuminate\Validation\ValidationException $e, $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
-                return response()->json([
-                    'error'   => 'Validation failed.',
-                    'details' => $e->errors(),
-                ], 422);
+                return response()->json(['error' => 'Validation failed.', 'details' => $e->errors()], 422);
             }
         });
-
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
             if ($request->is('api/*')) {
                 return response()->json(['error' => $e->getMessage() ?: 'Not found.'], 404);
+            }
+        });
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
             }
         });
     })

@@ -189,7 +189,98 @@ class OllamaController extends Controller
     /**
      * Build a rich prompt that mimics Postman AI documentation style.
      */
-    private function buildPrompt(array $ep): string
+//     private function buildPrompt(array $ep): string
+//     {
+//         $method      = strtoupper($ep['method'] ?? 'GET');
+//         $name        = $ep['name'] ?? 'Unnamed Endpoint';
+//         $url         = $ep['url'] ?? '';
+//         $description = $ep['description'] ?? '';
+//         $group       = $ep['group'] ?? '';
+
+//         // Query params
+//         $queryParams = '';
+//         foreach ($ep['query'] ?? [] as $q) {
+//             if (!($q['disabled'] ?? false)) {
+//                 $queryParams .= "  - {$q['key']}: {$q['value']} — {$q['description']}\n";
+//             }
+//         }
+
+//         // Path variables
+//         $pathVars = '';
+//         foreach ($ep['path_vars'] ?? [] as $pv) {
+//             $pathVars .= "  - :{$pv['key']} = {$pv['value']}\n";
+//         }
+
+//         // Request body
+//         $bodyInfo = '';
+//         $body     = $ep['body'] ?? [];
+//         $mode     = $body['mode'] ?? '';
+//         if ($mode === 'raw' && !empty($body['raw'])) {
+//             $language = $body['options']['raw']['language'] ?? 'json';
+//             $bodyInfo = "Raw body ({$language}):\n{$body['raw']}";
+//         } elseif (in_array($mode, ['formdata', 'urlencoded'])) {
+//             $params = $body[$mode] ?? [];
+//             foreach ($params as $p) {
+//                 if (!(isset($p['disabled']) ? $p['disabled'] : false)) {
+//                     $bodyInfo .= "  - {$p['key']} (" . (isset($p['type']) ? $p['type'] : 'text') . "): {$p['value']} — " . (isset($p['description']) ? $p['description'] : '') . "\n";
+//                 }
+//             }
+//         }
+
+//         // Example response
+//         $exampleResp = '';
+//         $responses   = $ep['responses'] ?? [];
+//         if (!empty($responses[0]['body'])) {
+//             $decoded = json_decode($responses[0]['body'], true);
+//             $preview = $decoded ? json_encode($decoded, JSON_PRETTY_PRINT) : $responses[0]['body'];
+//             $exampleResp = substr($preview, 0, 600) . (strlen($preview) > 600 ? '...' : '');
+//         }
+
+//         // Auth
+//         $auth     = $ep['auth'] ?? [];
+//         $authType = $auth['type'] ?? 'none';
+
+//         // Prepare conditional parts for heredoc
+//         $queryPart = $queryParams ? "Query Parameters:\n{$queryParams}" : '';
+//         $pathPart = $pathVars ? "Path Variables:\n{$pathVars}" : '';
+//         $bodyPart = $bodyInfo ? "Request Body ({$mode}):\n{$bodyInfo}" : '';
+//         $examplePart = $exampleResp ? "Example Response:\n{$exampleResp}" : '';
+//         $descPart = $description ? "Existing Description:\n{$description}" : '';
+
+//         return <<<PROMPT
+// You are an expert API documentation writer, similar to Postman's AI docs feature.
+
+// Generate a clear, concise, developer-friendly documentation summary for the following API endpoint. Write in plain English. Follow this structure exactly:
+
+// 1. **Overview** — One sentence describing what this endpoint does.
+// 2. **Use Case** — When and why a developer would call this endpoint (1-2 sentences).
+// 3. **Authentication** — Describe the auth requirement.
+// 4. **Parameters** — Briefly describe each parameter's purpose (skip if none).
+// 5. **Request Body** — Describe the body fields and their role (skip if none).
+// 6. **Response** — What the API returns on success and what key fields mean (skip if no example).
+// 7. **Notes** — Any important caveats, rate limits, or tips (optional).
+
+// Keep the tone technical but approachable. Be specific — don't write generic filler. Do NOT include code examples.
+
+// ---
+// Endpoint Name: {$name}
+// Group / Module: {$group}
+// HTTP Method: {$method}
+// URL: {$url}
+// Auth: {$authType}
+// {$queryPart}
+// {$pathPart}
+// {$bodyPart}
+// {$examplePart}
+// {$descPart}
+// ---
+
+// Write the documentation summary now:
+// PROMPT;
+//     }
+
+
+   private function buildPrompt(array $ep): string
     {
         $method      = strtoupper($ep['method'] ?? 'GET');
         $name        = $ep['name'] ?? 'Unnamed Endpoint';
@@ -200,13 +291,13 @@ class OllamaController extends Controller
         // Query params
         $queryParams = '';
         foreach ($ep['query'] ?? [] as $q) {
-            if (!($q['disabled'] ?? false)) {
+            if (! ($q['disabled'] ?? false)) {
                 $queryParams .= "  - {$q['key']}: {$q['value']} — {$q['description']}\n";
             }
         }
 
         // Path variables
-        $pathVars = '';
+        $pathVars  = '';
         foreach ($ep['path_vars'] ?? [] as $pv) {
             $pathVars .= "  - :{$pv['key']} = {$pv['value']}\n";
         }
@@ -215,13 +306,13 @@ class OllamaController extends Controller
         $bodyInfo = '';
         $body     = $ep['body'] ?? [];
         $mode     = $body['mode'] ?? '';
-        if ($mode === 'raw' && !empty($body['raw'])) {
+        if ($mode === 'raw' && ! empty($body['raw'])) {
             $language = $body['options']['raw']['language'] ?? 'json';
             $bodyInfo = "Raw body ({$language}):\n{$body['raw']}";
         } elseif (in_array($mode, ['formdata', 'urlencoded'])) {
             $params = $body[$mode] ?? [];
             foreach ($params as $p) {
-                if (!(isset($p['disabled']) ? $p['disabled'] : false)) {
+                if (! (isset($p['disabled']) ? $p['disabled'] : false)) {
                     $bodyInfo .= "  - {$p['key']} (" . (isset($p['type']) ? $p['type'] : 'text') . "): {$p['value']} — " . (isset($p['description']) ? $p['description'] : '') . "\n";
                 }
             }
@@ -230,9 +321,9 @@ class OllamaController extends Controller
         // Example response
         $exampleResp = '';
         $responses   = $ep['responses'] ?? [];
-        if (!empty($responses[0]['body'])) {
-            $decoded = json_decode($responses[0]['body'], true);
-            $preview = $decoded ? json_encode($decoded, JSON_PRETTY_PRINT) : $responses[0]['body'];
+        if (! empty($responses[0]['body'])) {
+            $decoded     = json_decode($responses[0]['body'], true);
+            $preview     = $decoded ? json_encode($decoded, JSON_PRETTY_PRINT) : $responses[0]['body'];
             $exampleResp = substr($preview, 0, 600) . (strlen($preview) > 600 ? '...' : '');
         }
 
@@ -241,28 +332,61 @@ class OllamaController extends Controller
         $authType = $auth['type'] ?? 'none';
 
         // Prepare conditional parts for heredoc
-        $queryPart = $queryParams ? "Query Parameters:\n{$queryParams}" : '';
-        $pathPart = $pathVars ? "Path Variables:\n{$pathVars}" : '';
-        $bodyPart = $bodyInfo ? "Request Body ({$mode}):\n{$bodyInfo}" : '';
+        $queryPart   = $queryParams ? "Query Parameters:\n{$queryParams}" : '';
+        $pathPart    = $pathVars ? "Path Variables:\n{$pathVars}" : '';
+        $bodyPart    = $bodyInfo ? "Request Body ({$mode}):\n{$bodyInfo}" : '';
         $examplePart = $exampleResp ? "Example Response:\n{$exampleResp}" : '';
-        $descPart = $description ? "Existing Description:\n{$description}" : '';
+        $descPart    = $description ? "Existing Description:\n{$description}" : '';
 
         return <<<PROMPT
-You are an expert API documentation writer, similar to Postman's AI docs feature.
+You are an expert API documentation writer, similar to Postman’s AI documentation assistant.
 
-Generate a clear, concise, developer-friendly documentation summary for the following API endpoint. Write in plain English. Follow this structure exactly:
+Generate clear, concise, developer-friendly documentation for the API endpoint provided.
 
-1. **Overview** — One sentence describing what this endpoint does.
-2. **Use Case** — When and why a developer would call this endpoint (1-2 sentences).
-3. **Authentication** — Describe the auth requirement.
-4. **Parameters** — Briefly describe each parameter's purpose (skip if none).
-5. **Request Body** — Describe the body fields and their role (skip if none).
-6. **Response** — What the API returns on success and what key fields mean (skip if no example).
-7. **Notes** — Any important caveats, rate limits, or tips (optional).
+Use plain English and base your output ONLY on the supplied endpoint data.
 
-Keep the tone technical but approachable. Be specific — don't write generic filler. Do NOT include code examples.
+Do not invent:
+- fields
+- behaviors
+- authentication methods
+- rate limits
+- validation rules
+- response structures
+- business logic
+- implementation details
 
----
+If information is missing, explicitly say so instead of guessing.
+
+Follow this structure exactly:
+
+1. **Overview** — One sentence explaining what the endpoint does.
+2. **Use Case** — Briefly explain when and why a developer would use this endpoint.
+3. **Authentication** — Describe the authentication requirement only if explicitly provided.
+Otherwise state:
+"No authentication details provided."
+4. **Parameters** — List and briefly explain each parameter and its purpose.
+Skip this section entirely if there are no parameters.
+5. **Request Body** — List and briefly explain each request body field and its role.
+Mention required fields when known.
+Skip this section entirely if there is no request body.
+6. **Response** — Describe the successful response and explain the meaning of important response fields using ONLY the provided example or schema.
+Skip this section entirely if no response example/schema is available.
+7. **Notes** — Include important implementation details, constraints, caveats, or developer tips ONLY if explicitly available.
+Otherwise omit this section entirely.
+
+Additional Rules:
+- Keep the tone technical but approachable.
+- Avoid generic filler language.
+- Do not include code examples.
+- Do not repeat the endpoint URL unless necessary.
+- Prefer short paragraphs or bullet points for readability.
+- Prioritize describing real field behavior inferred from examples over generic API terminology.
+- Be precise and developer-focused.
+
+--------------------------------------------------
+API ENDPOINT DETAILS
+--------------------------------------------------
+
 Endpoint Name: {$name}
 Group / Module: {$group}
 HTTP Method: {$method}

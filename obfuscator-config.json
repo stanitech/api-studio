@@ -1,0 +1,11 @@
+{
+  "compact": true,
+  "selfDefending": false,
+  "deadCodeInjection": false,
+  "controlFlowFlattening": false,
+  "numbersToExpressions": false,
+  "stringArray": true,
+  "stringArrayEncoding": ["base64"],
+  "stringArrayThreshold": 0.75,
+  "splitStrings": false
+}
