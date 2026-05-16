@@ -41,7 +41,9 @@ class CollectionController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:json|max:10240',
+            // Allow any uploaded file type and rely on JSON decoding to validate structure.
+            // Keep the size limit (in kilobytes) to prevent excessively large uploads.
+            'file' => 'required|file|max:30240',
             'name' => 'nullable|string|max:120',
         ]);
 
