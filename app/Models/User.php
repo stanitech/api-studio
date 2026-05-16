@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -23,9 +22,12 @@ class User extends Authenticatable
 
     // ── Role helpers ──────────────────────────────────────────────────────────
 
-    public function isAdmin(): bool   { return $this->role === 'admin'; }
-    public function isEditor(): bool  { return $this->role === 'editor'; }
-    public function isViewer(): bool  { return $this->role === 'viewer'; }
+    public function isAdmin(): bool
+    {return $this->role === 'admin';}
+    public function isEditor(): bool
+    {return $this->role === 'editor';}
+    public function isViewer(): bool
+    {return $this->role === 'viewer';}
 
     /** Check a permission flag e.g. 'run', 'write', 'ai', 'read' */
     public function hasPermission(string $permission): bool
@@ -39,7 +41,6 @@ class User extends Authenticatable
 
         return in_array($permission, $perms);
     }
-
     // Default permissions by role (used when creating users)
     public static function defaultPermissions(string $role): array
     {

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\EndpointController;
 use App\Http\Controllers\OllamaController;
@@ -63,5 +64,14 @@ Route::middleware(AuthMiddleware::class)->group(function () {
         Route::put('/{id}',             [UserController::class, 'update']);
         Route::delete('/{id}',          [UserController::class, 'destroy']);
         Route::post('/change-password', [UserController::class, 'changePassword']);
+    });
+
+    // Chat / Real-time Collaboration
+    Route::prefix('chat')->group(function () {
+        Route::get('/messages',  [ChatController::class, 'index']);
+        Route::post('/messages', [ChatController::class, 'store']);
+        Route::delete('/messages/{id}', [ChatController::class, 'destroy']);
+        Route::get('/poll',      [ChatController::class, 'poll']);
+        Route::get('/users',     [ChatController::class, 'users']);
     });
 });

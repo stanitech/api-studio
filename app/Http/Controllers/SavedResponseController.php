@@ -32,6 +32,8 @@ class SavedResponseController extends Controller
             return response()->json(['error' => 'No permission to save responses.'], 403);
         }
 
+
+
         $request->validate([
             'collection_id'    => 'required|string',
             'endpoint_id'      => 'required|string',

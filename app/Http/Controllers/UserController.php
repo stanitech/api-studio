@@ -121,6 +121,6 @@ class UserController extends Controller
         if (!Auth::check() || !Auth::user()->hasPermission($permission)) {
             abort(403, 'Insufficient permissions.');
         }
-
     }
 }
+

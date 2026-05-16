@@ -12,10 +12,12 @@
     <link
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;600;700&display=swap"
         rel="stylesheet">
+
     <link rel="stylesheet" href="/css/app.css">
+
 </head>
 
-<body data-theme="dark">
+<body>
 
     <!-- ══ LOGIN PAGE ══════════════════════════════════════════ -->
     <div id="loginPage">
@@ -24,7 +26,7 @@
                 <div class="spark">ST</div>
                 <div>
                     <h1>{{ config('app.name') }}</h1>
-                    <p>Dev Docs Platform</p>
+                    <p>Dev Doc Platform</p>
                 </div>
             </div>
             <div class="login-error" id="loginError"></div>
@@ -38,10 +40,11 @@
             </div>
             <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
             <div class="login-demo">
-                <strong>Demo accounts:</strong><br>
-                admin@apidocs.dev / Admin@1234 (Admin)<br>
+                <strong>Demo account:</strong><br>
+                {{-- admin@apidocs.dev / Admin@1234 (Admin)<br>
                 editor@apidocs.dev / Editor@1234 (Editor)<br>
-                viewer@apidocs.dev / Viewer@1234 (Viewer)
+                viewer@apidocs.dev / Viewer@1234 (Viewer) --}}
+                guest@company.dev / Guest1234 (Viewer)
             </div>
             <div class="login-footer">Contact your admin for access &nbsp;·&nbsp; <span
                     style="color:var(--accent)">{{ config('app.name') }}</span></div>
@@ -93,9 +96,6 @@
                 <span class="model-badge" id="modelBadge" onclick="openModelModal()">—</span>
             </span>
 
-            <button class="nav-btn theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme">
-                <i class="bi bi-brightness-high"></i>
-            </button>
             <button class="nav-btn ai-btn" id="btnAiAll" onclick="batchSummarizeAll()">
                 <i class="bi bi-stars"></i><span class="btn-text"> AI All</span>
             </button>
@@ -107,6 +107,10 @@
             </button>
             <button class="nav-btn" id="btnUsers" onclick="openUsersModal()" style="display:none">
                 <i class="bi bi-people"></i><span class="btn-text"> Users</span>
+            </button>
+            <!-- Chat toggle -->
+            <button class="nav-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle day/night">
+                <i class="bi bi-moon-stars-fill"></i>
             </button>
             <div class="user-pill" onclick="openProfileModal()" title="Profile & sign out">
                 <div class="u-avatar" id="navAvatar">?</div>
@@ -350,20 +354,62 @@
                             <input type="password" class="form-control" id="anthropicKey" placeholder="sk-ant-…">
                             <button class="btn btn-primary btn-sm" onclick="saveCloudKey('anthropic')">Save</button>
                         </div>
+                        <!-- Groq — Llama3 cloud -->
+                        <div class="model-card" id="card-groq-llama3-70b-8192"
+                            onclick="selectCloudModel('groq','llama3-70b-8192','Llama3-70B (Groq)')">
+                            <div class="model-provider"
+                                style="background:linear-gradient(135deg,#f55036,#c1220a);color:#fff;font-size:.62rem;font-family:'JetBrains Mono',monospace;font-weight:700">
+                                Gr</div>
+                            <div class="model-info">
+                                <div class="model-name">Llama3-70B (Groq)</div>
+                                <div class="model-desc">Meta via Groq · Ultra-fast cloud</div>
+                            </div>
+                            <span id="chk-groq-llama3-70b-8192" style="color:var(--green);display:none"><i
+                                    class="bi bi-check2-circle"></i></span>
+                        </div>
+                        <div class="model-card" id="card-groq-llama-3.1-8b-instant"
+                            onclick="selectCloudModel('groq','llama-3.1-8b-instant','Llama3.1-8B (Groq)')">
+                            <div class="model-provider"
+                                style="background:linear-gradient(135deg,#f55036,#c1220a);color:#fff;font-size:.62rem;font-family:'JetBrains Mono',monospace;font-weight:700">
+                                Gr</div>
+                            <div class="model-info">
+                                <div class="model-name">Llama3.1-8B (Groq)</div>
+                                <div class="model-desc">Meta via Groq · Instant, free tier</div>
+                            </div>
+                            <span id="chk-groq-llama-3.1-8b-instant" style="color:var(--green);display:none"><i
+                                    class="bi bi-check2-circle"></i></span>
+                        </div>
+                        <div class="api-key-row" id="groq-key-row" style="display:none">
+                            <input type="password" class="form-control" id="groqKey"
+                                placeholder="gsk_… Groq API key (free at console.groq.com)">
+                            <button class="btn btn-primary btn-sm" onclick="saveCloudKey('groq')">Save</button>
+                        </div>
                         <!-- Google -->
-                        <div class="model-card" id="card-google-gemini-1.5-flash"
-                            onclick="selectCloudModel('google','gemini-1.5-flash','Gemini 1.5 Flash')">
+                        <div class="model-card" id="card-google-gemini-2.0-flash"
+                            onclick="selectCloudModel('google','gemini-2.0-flash','Gemini 2.0 Flash')">
                             <div class="model-provider"
                                 style="background:linear-gradient(135deg,#4285f4,#0f4c9f);color:#fff">G</div>
                             <div class="model-info">
-                                <div class="model-name">Gemini 1.5 Flash</div>
-                                <div class="model-desc">Google · Very fast</div>
+                                <div class="model-name">Gemini 2.0 Flash</div>
+                                <div class="model-desc">Google · Fastest, multimodal</div>
                             </div>
-                            <span id="chk-google-gemini-1.5-flash" style="color:var(--green);display:none"><i
+                            <span id="chk-google-gemini-2.0-flash" style="color:var(--green);display:none"><i
+                                    class="bi bi-check2-circle"></i></span>
+                        </div>
+                        <div class="model-card" id="card-google-gemini-2.5-flash"
+                            onclick="selectCloudModel('google','gemini-2.5-flash-preview-05-20','Gemini 2.5 Flash')">
+                            <div class="model-provider"
+                                style="background:linear-gradient(135deg,#4285f4,#0f4c9f);color:#fff">G</div>
+                            <div class="model-info">
+                                <div class="model-name">Gemini 2.5 Flash</div>
+                                <div class="model-desc">Google · Most intelligent</div>
+                            </div>
+                            <span id="chk-google-gemini-2.5-flash" style="color:var(--green);display:none"><i
                                     class="bi bi-check2-circle"></i></span>
                         </div>
                         <div class="api-key-row" id="google-key-row" style="display:none">
-                            <input type="password" class="form-control" id="googleKey" placeholder="AIza…">
+                            <input type="password" class="form-control" id="googleKey"
+                                placeholder="AIza… Google AI Studio key">
                             <button class="btn btn-primary btn-sm" onclick="saveCloudKey('google')">Save</button>
                         </div>
                     </div>
@@ -475,12 +521,79 @@
         </div>
     </div>
 
+    <!-- ══ FLOATING CHAT BUTTON ═════════════════════════════ -->
+    <button class="floating-chat-btn" id="btnChat" onclick="toggleChat()" title="Team Chat">
+        <i class="bi bi-chat-dots" style="color:var(--text)"></i>
+        <span class="chat-badge" id="chatBadge"></span>
+    </button>
+
+    <!-- ══ CHAT DRAWER ════════════════════════════════════════ -->
+    <div class="chat-drawer" id="chatDrawer">
+        <!-- Header -->
+        <div class="chat-header">
+            <span class="chat-online-dot" id="chatOnlineDot" style="display:block"></span>
+            <span class="chat-header-title"><i class="bi bi-chat-dots me-1" style="color:var(--accent)"></i>Team
+                Chat</span>
+            <span id="chatOnlineCount" style="font-size:.66rem;color:var(--muted)"></span>
+            <button class="chat-mute-btn" id="chatMuteBtn" title="Toggle sound"><i class="bi bi-bell" style="color:var(--text)"></i></button>
+            <button class="chat-close-btn" onclick="toggleChat()" title="Close chat"><i
+                    class="bi bi-x-lg"></i></button>
+        </div>
+
+        <!-- Channel tabs -->
+        <div class="chat-channel-tabs">
+            <button class="chat-tab active" id="tab-general" onclick="switchChatChannel('general',null,this)"><i
+                    class="bi bi-hash"></i> General</button>
+            <button class="chat-tab" id="tab-collection" onclick="switchChatChannel('collection',S.activeId,this)"><i
+                    class="bi bi-folder2"></i> Collection</button>
+        </div>
+
+        <!-- Messages -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-empty">
+                <i class="bi bi-chat-dots" style="font-size:2rem;opacity:.3"></i>
+                <span>No messages yet.<br>Start the conversation!</span>
+            </div>
+        </div>
+
+        <!-- Typing indicator -->
+        <div class="chat-typing" id="chatTyping"></div>
+
+        <!-- Input area -->
+        <div class="chat-input-area">
+            <div class="chat-mention-dropdown" id="chatMentionDropdown"></div>
+            <div class="chat-input-row">
+                <textarea class="chat-textarea" id="chatInput" placeholder="Message… use @name to mention" rows="1"
+                    onkeydown="chatKeyDown(event)" oninput="chatInputChange(this)"></textarea>
+                <button class="chat-emoji-btn" id="chatEmojiBtn" onclick="toggleEmojiPicker()" title="Insert emoji">
+                    <i class="bi bi-emoji-smile" style="color:var(--text)"></i>
+                </button>
+                <div class="chat-emoji-picker" id="chatEmojiPicker" style="display:none"></div>
+                <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">
+                    <i class="bi bi-send-fill" style="color:var(--text)"></i>
+                </button>
+            </div>
+            <div style="font-size:.62rem;color:var(--muted);margin-top:4px">
+                <kbd
+                    style="background:var(--text); color:var(--bg2); border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:.62rem">Enter</kbd>&nbsp;
+                send &nbsp;
+                <kbd
+                    style="background:var(--text); color:var(--bg2); border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:.62rem">Shift+Enter</kbd>
+                <span class="me" style="margin-right: 5.5rem">new line</span>
+                 <i class="bi bi-code-slash" style="color:var(--accent)"></i> <span class="text-capitalize">stan</span>
+
+            </div>
+        </div>
+    </div>
+
     <div class="toast-stack" id="toastStack"></div>
     <button id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i
-            class="bi bi-chevron-up"></i></button>
+            class="bi bi-chevron-up" style="color:var(--text)"></i></button>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-    <script class="src" src="/js/app.js"></script>
-    {{-- <script src="/js/app.min.js"></script> --}}
+    @verbatim
+        <script src="/js/app.js"></script>
+    @endverbatim
+
 </body>
 
 </html>

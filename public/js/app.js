@@ -1,8 +1,7 @@
 /* ============================================================
-STATE
-============================================================ */
+     STATE
+  ============================================================ */
 const API = '/api';
-const THEME_KEY = 'apidocs_theme';
 const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 const MC = {
     GET: '#28a745',
@@ -28,13 +27,14 @@ const S = {
     cloudProvider: localStorage.getItem('apidocs_cprov') ?? null,
     cloudModel: localStorage.getItem('apidocs_cmodel') ?? null,
     cloudLabel: localStorage.getItem('apidocs_clabel') ?? null,
-    theme: localStorage.getItem(THEME_KEY) ?? 'dark',
     cloudKeys: {
         openai: localStorage.getItem('apidocs_key_openai') ?? '',
         anthropic: localStorage.getItem('apidocs_key_anthropic') ?? '',
         google: localStorage.getItem('apidocs_key_google') ?? '',
+        groq: localStorage.getItem('apidocs_key_groq') ?? '',
     },
     lastResp: null,
+    theme: localStorage.getItem('apidocs_theme') ?? 'dark',
 };
 
 /* ============================================================
@@ -55,6 +55,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (S.baseUrl) document.getElementById('baseUrlInput').value = S.baseUrl;
     if (S.globalBearer) document.getElementById('globalBearer').value = S.globalBearer;
     initTheme();
+    // emoji picker build + global click handler to close it when clicking outside
+    buildEmojiPicker();
+    document.addEventListener('click', (ev) => {
+        const p = document.getElementById('chatEmojiPicker');
+        const btn = document.getElementById('chatEmojiBtn');
+        if (!p) return;
+        if (p.style.display === 'grid' && !p.contains(ev.target) && ev.target !== btn) {
+            p.style.display = 'none';
+        }
+    });
+    document.getElementById('chatEmojiBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleEmojiPicker();
+    });
+    // audio init + mute button
+    initChatAudio();
+    document.getElementById('chatMuteBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleChatMute();
+    });
     try {
         const r = await fetch(`${API}/auth/me`, {
             headers: {
@@ -72,18 +92,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ============================================================
-   AUTH
+   THEME
 ============================================================ */
-function showLogin() {
-    document.getElementById('loginPage').style.display = 'flex';
-    document.getElementById('appShell').style.display = 'none';
-}
-
-function showApp() {
-    document.getElementById('loginPage').style.display = 'none';
-    document.getElementById('appShell').style.display = 'block';
-}
-
 function applyTheme(theme) {
     const actual = theme === 'auto'
         ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
@@ -107,9 +117,23 @@ function toggleTheme() {
     const current = document.body.getAttribute('data-theme') ?? 'dark';
     const next = current === 'dark' ? 'light' : 'dark';
     S.theme = next;
-    localStorage.setItem(THEME_KEY, next);
+    localStorage.setItem('apidocs_theme', next);
     applyTheme(next);
 }
+
+/* ============================================================
+   AUTH
+============================================================ */
+function showLogin() {
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('appShell').style.display = 'none';
+}
+
+function showApp() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('appShell').style.display = 'block';
+}
+
 
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
@@ -182,6 +206,8 @@ async function bootApp(user) {
     initMobileLayout();
     setInterval(checkOllama, 30000);
     syncCloudUI();
+    // Start background chat polling for unread badge
+    startBgChatPoll();
 }
 
 /* ============================================================
@@ -206,6 +232,17 @@ function applyRoleUI() {
     document.getElementById('btnAiAll').style.display = hasAI ? '' : 'none';
     document.getElementById('btnUsers').style.display = hasUsers ? '' : 'none';
     document.getElementById('sidebarImportBtn').style.display = hasWrite ? '' : 'none';
+
+    const isViewer = S.user?.role === 'viewer';
+    const baseUrlInput = document.getElementById('baseUrlInput');
+    const globalBearerInput = document.getElementById('globalBearer');
+    const baseUrlSave = document.querySelector('.base-url-pill .nav-pill-save');
+    const bearerSave = document.querySelector('.bearer-pill .nav-pill-save');
+
+    if (baseUrlInput) baseUrlInput.disabled = isViewer;
+    if (globalBearerInput) globalBearerInput.disabled = isViewer;
+    if (baseUrlSave) baseUrlSave.disabled = isViewer;
+    if (bearerSave) bearerSave.disabled = isViewer;
 
     // Hero "Regen All" button — shown only if user can use AI
     const regenAllBtn = document.getElementById('regenAllBtn');
@@ -287,7 +324,7 @@ function openModelModal() {
 }
 
 function selectCloudModel(p, m, l) {
-    ['openai', 'anthropic', 'google'].forEach(x => {
+    ['openai', 'anthropic', 'google', 'groq'].forEach(x => {
         const r = document.getElementById(x + '-key-row');
         if (r) r.style.display = x === p ? 'flex' : 'none';
     });
@@ -301,7 +338,8 @@ function saveCloudKey(p) {
     const ids = {
         openai: 'openaiKey',
         anthropic: 'anthropicKey',
-        google: 'googleKey'
+        google: 'googleKey',
+        groq: 'groqKey'
     };
     const key = document.getElementById(ids[p])?.value.trim();
     if (!key) {
@@ -366,13 +404,20 @@ function renderCollectionSelect() {
     const sel = document.getElementById('collectionSelect');
     const prev = sel.value;
     sel.innerHTML = '<option value="">— Select —</option>';
-    S.collections.forEach(c => {
+
+    const assignedId = S.user?.default_collection_id;
+    const visibleCollections = can('manage_users') || !assignedId
+        ? S.collections
+        : S.collections.filter(c => c.id === assignedId);
+
+    visibleCollections.forEach(c => {
         const o = document.createElement('option');
         o.value = c.id;
         o.textContent = c.name + ' (' + c.total + ')';
         if (c.id === S.activeId) o.selected = true;
         sel.appendChild(o);
     });
+
     if (!S.activeId && prev) sel.value = prev;
 }
 
@@ -412,6 +457,11 @@ async function loadCollection(id) {
    BASE URL + BEARER TOKEN — persistent, per-collection
 ============================================================ */
 function saveBaseUrl() {
+    if (S.user?.role === 'viewer') {
+        toast('Viewer accounts cannot modify the Base URL', 'error');
+        return;
+    }
+
     const v = document.getElementById('baseUrlInput').value.trim().replace(/\/+$/, '');
     S.baseUrl = v;
     localStorage.setItem('apidocs_base_url', v);
@@ -421,6 +471,11 @@ function saveBaseUrl() {
 }
 
 function saveGlobalBearer() {
+    if (S.user?.role === 'viewer') {
+        toast('Viewer accounts cannot modify the Bearer token', 'error');
+        return;
+    }
+
     const v = document.getElementById('globalBearer').value.trim();
     S.globalBearer = v;
     localStorage.setItem('apidocs_bearer', v);
@@ -607,13 +662,14 @@ function buildRunner(ep) {
 
     // Pre-fill query params
     let qRows = '';
-    (ep.query ?? []).filter(q => !q.disabled).forEach(q => {
-        qRows += `<div class="runner-param-row">
+    (ep.query ?? [])
+        .filter(q => !q.disabled).forEach(q => {
+            qRows += `<div class="runner-param-row">
       <input type="text" class="r-key" placeholder="key" value="${esc(q.key)}">
       <input type="text" class="r-val" placeholder="value" value="${esc(q.value)}">
       <button class="btn-rm" onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>
     </div>`;
-    });
+        });
 
     // Pre-fill headers — inject real bearer value directly
     const bearerVal = S.globalBearer ? 'Bearer ' + S.globalBearer : '';
@@ -951,6 +1007,51 @@ function renderMD(txt) {
     return txt.split('\n').map(l => l.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')).join('<br>');
 }
 
+const TYPEWRITER = {};
+
+function startTypewriter(epId, text) {
+    stopTypewriter(epId);
+    const tx = document.getElementById('aitext-' + epId);
+    if (!tx) return;
+    tx.classList.add('ai-typewriter');
+    tx.textContent = '';
+    TYPEWRITER[epId] = { text, idx: 0, timer: null, elem: tx };
+    const step = () => {
+        const state = TYPEWRITER[epId];
+        if (!state) return;
+        state.idx = Math.min(state.idx + 1, state.text.length);
+        state.elem.textContent = state.text.slice(0, state.idx);
+        if (state.idx < state.text.length) {
+            state.timer = setTimeout(step, 18);
+        } else {
+            state.elem.classList.remove('ai-typewriter');
+            state.elem.innerHTML = renderMD(state.text);
+            delete TYPEWRITER[epId];
+        }
+    };
+    step();
+}
+
+function updateTypewriter(epId, text) {
+    const state = TYPEWRITER[epId];
+    if (!state) {
+        startTypewriter(epId, text);
+        return;
+    }
+    state.text = text;
+}
+
+function stopTypewriter(epId, renderFinal = false) {
+    const state = TYPEWRITER[epId];
+    if (!state) return;
+    if (state.timer) clearTimeout(state.timer);
+    if (renderFinal && state.elem) {
+        state.elem.classList.remove('ai-typewriter');
+        state.elem.innerHTML = renderMD(state.text);
+    }
+    delete TYPEWRITER[epId];
+}
+
 async function generateSummary(epId) {
     const isCloud = !!S.cloudProvider;
     if (!isCloud && !S.ollamaOnline) {
@@ -1009,7 +1110,7 @@ async function generateSummary(epId) {
         if (isCloud) {
             accumulated = await callCloudAI(ep);
             const tx = document.getElementById('aitext-' + epId);
-            if (tx) tx.innerHTML = renderMD(accumulated);
+            if (tx) startTypewriter(epId, accumulated);
         } else {
             // Ollama SSE stream
             const res = await fetch(`${API}/ai/summarize`, {
@@ -1048,7 +1149,7 @@ async function generateSummary(epId) {
                                 dotsGone = true;
                             }
                             accumulated += d.token;
-                            if (tx) tx.innerHTML = renderMD(accumulated);
+                            if (tx) updateTypewriter(epId, accumulated);
                         }
                         if (d.done) {
                             ep.ai_summary = d.summary || accumulated;
@@ -1157,13 +1258,81 @@ async function callCloudAI(ep) {
         }
         return (await r.json()).candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     }
+    if (p === 'groq') {
+        // Groq uses OpenAI-compatible API — supports Llama3, Mixtral, etc.
+        const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + k
+            },
+            body: JSON.stringify({
+                model: m,
+                messages: [{
+                    role: 'user',
+                    content: prompt
+                }],
+                max_tokens: 1024,
+                temperature: 0.3
+            })
+        });
+        if (!r.ok) {
+            const e = await r.json();
+            throw new Error(e.error?.message ?? 'Groq error');
+        }
+        return (await r.json()).choices?.[0]?.message?.content ?? '';
+    }
     throw new Error('Unknown provider: ' + p);
 }
 
 function buildPrompt(ep) {
-    const q = (ep.query ?? []).filter(q => !q.disabled).map(q => `  - ${q.key}: ${q.value}`).join('\n');
-    const b = ep.body?.raw ?? '';
-    return `You are an expert API documentation writer, similar to Postman’s AI documentation assistant.
+    const method = ep.method ?? 'GET',
+        name = ep.name ?? '',
+        url = ep.url ?? '',
+        group = ep.group ?? '';
+    const auth = ep.auth?.type ?? 'none',
+        desc = ep.description ?? '';
+    // Query params
+    let queryPart = '';
+    (ep.query ?? []).filter(q => !q.disabled).forEach(q => {
+        queryPart += `  - ${q.key}: ${q.value} — ${q.description ?? ''}\n`;
+    });
+    if (queryPart) queryPart = 'Query Parameters:\n' + queryPart;
+    // Path vars
+    let pathPart = '';
+    (ep.path_vars ?? []).forEach(pv => {
+        pathPart += `  - :${pv.key} = ${pv.value}\n`;
+    });
+    if (pathPart) pathPart = 'Path Variables:\n' + pathPart;
+    // Body
+    let bodyPart = '';
+    const body = ep.body ?? {},
+        mode = body.mode ?? '';
+    if (mode === 'raw' && body.raw) {
+        const lang = body.options?.raw?.language ?? 'json';
+        bodyPart = `Request Body (${mode}):\nRaw body (${lang}):\n${body.raw}`;
+    } else if (['formdata', 'urlencoded'].includes(mode)) {
+        const params = body[mode] ?? [];
+        let lines = '';
+        params.filter(p => !p.disabled).forEach(p => {
+            lines += `  - ${p.key} (${p.type ?? 'text'}): ${p.value} — ${p.description ?? ''}\n`;
+        });
+        if (lines) bodyPart = `Request Body (${mode}):\n${lines}`;
+    }
+    // Example response
+    let examplePart = '';
+    const resp = (ep.responses ?? [])[0];
+    if (resp?.body) {
+        let b = resp.body;
+        try {
+            b = JSON.stringify(JSON.parse(b), null, 2);
+        } catch { }
+        examplePart = 'Example Response:\n' + b.substring(0, 600) + (b.length > 600 ? '...' : '');
+    }
+    const descPart = desc ? 'Existing Description:\n' + desc : '';
+
+    return `You are an expert API documentation writer, similar to Postman's AI documentation assistant.
+
 Generate clear, concise, developer-friendly documentation for the API endpoint provided.
 
 Use plain English and base your output ONLY on the supplied endpoint data.
@@ -1181,20 +1350,14 @@ Do not invent:
 If information is missing, explicitly say so instead of guessing.
 
 Follow this structure exactly:
+
 1. **Overview** — One sentence explaining what the endpoint does.
 2. **Use Case** — Briefly explain when and why a developer would use this endpoint.
-3. **Authentication** — Describe the authentication requirement only if explicitly provided.
-Otherwise state:
-"No authentication details provided."
-4. **Parameters** — List and briefly explain each parameter and its purpose.
-Skip this section entirely if there are no parameters.
-5. **Request Body** — List and briefly explain each request body field and its role.
-Mention required fields when known.
-Skip this section entirely if there is no request body.
-6. **Response** — Describe the successful response and explain the meaning of important response fields using ONLY the provided example or schema.
-Skip this section entirely if no response example/schema is available.
-7. **Notes** — Include important implementation details, constraints, caveats, or developer tips ONLY if explicitly available.
-Otherwise omit this section entirely.
+3. **Authentication** — Describe the authentication requirement only if explicitly provided. Otherwise state: "No authentication details provided."
+4. **Parameters** — List and briefly explain each parameter and its purpose. Skip this section entirely if there are no parameters.
+5. **Request Body** — List and briefly explain each request body field and its role. Mention required fields when known. Skip this section entirely if there is no request body.
+6. **Response** — Describe the successful response and explain the meaning of important response fields using ONLY the provided example or schema. Skip this section entirely if no response example/schema is available.
+7. **Notes** — Include important implementation details, constraints, caveats, or developer tips ONLY if explicitly available. Otherwise omit this section entirely.
 
 Additional Rules:
 - Keep the tone technical but approachable.
@@ -1209,14 +1372,19 @@ Additional Rules:
 API ENDPOINT DETAILS
 --------------------------------------------------
 
-Name: ${ep.name}
-Method: ${ep.method}
-URL: ${ep.url}
-Group: ${ep.group ?? ''}
-Auth: ${ep.auth?.type ?? 'noauth'}
-${q ? 'Query Params:\n' + q : ''}
-${b ? 'Body:\n' + b : ''}
----`;
+Endpoint Name: ${name}
+Group / Module: ${group}
+HTTP Method: ${method}
+URL: ${url}
+Auth: ${auth}
+${queryPart}
+${pathPart}
+${bodyPart}
+${examplePart}
+${descPart}
+---
+
+Write the documentation summary now:`;
 }
 
 async function persistSummary(endpointId, summary) {
@@ -1872,6 +2040,548 @@ function bindScroll() {
             l.classList.toggle('active', l.getAttribute('href') === '#' + cur);
         });
     });
+}
+
+
+/* ============================================================
+   CHAT — Real-time collaboration with polling + email notify
+============================================================ */
+const CHAT = {
+    open: false,
+    channel: 'general',
+    channelKey: null,
+    lastId: 0,
+    pollTimer: null,
+    pollInterval: 3000, // poll every 3s
+    users: [], // mentionable users
+    unread: 0,
+    mentionQuery: '',
+    mentionVisible: false,
+    roleColors: {
+        admin: '#dc3545',
+        editor: '#007bff',
+        viewer: '#6c757d'
+    },
+};
+
+function toggleChat() {
+    CHAT.open = !CHAT.open;
+    const drawer = document.getElementById('chatDrawer');
+    const main = document.getElementById('mainContent');
+    const btn = document.getElementById('btnChat');
+    drawer.classList.toggle('open', CHAT.open);
+    main.classList.toggle('chat-open', CHAT.open);
+    btn.classList.toggle('open', CHAT.open);
+    if (CHAT.open) {
+        clearChatBadge();
+        loadChatMessages();
+        startChatPoll();
+        loadChatUsers();
+        // auto-scroll to bottom
+        setTimeout(() => scrollChatBottom(), 100);
+    } else {
+        stopChatPoll();
+    }
+}
+
+function switchChatChannel(channel, channelKey, btn) {
+    CHAT.channel = channel;
+    CHAT.channelKey = channelKey ?? (channel === 'collection' ? S.activeId : null);
+    CHAT.lastId = 0;
+    document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('chatMessages').innerHTML = '';
+    loadChatMessages();
+}
+
+async function loadChatMessages(loadMore = false) {
+    const el = document.getElementById('chatMessages');
+    try {
+        let url = `${API}/chat/messages?channel=${CHAT.channel}&limit=50`;
+        if (CHAT.channelKey) url += '&channel_key=' + encodeURIComponent(CHAT.channelKey);
+        if (loadMore && CHAT.lastId) url += '&before_id=' + CHAT.lastId;
+
+        const res = await apiFetch(url.replace(API, ''));
+        const msgs = res.data ?? [];
+
+        if (msgs.length === 0 && !loadMore) {
+            el.innerHTML = `<div class="chat-empty">
+        <i class="bi bi-chat-dots" style="font-size:2rem;opacity:.3"></i>
+        <span>No messages yet.<br>Start the conversation!</span>
+      </div>`;
+            return;
+        }
+
+        // Track first id for load-more
+        if (msgs.length && !loadMore) {
+            CHAT.lastId = msgs[0].id;
+        }
+
+        if (loadMore) {
+            // Prepend older messages
+            const frag = document.createDocumentFragment();
+            if (res.has_more) {
+                const lb = document.createElement('div');
+                lb.className = 'chat-load-more';
+                lb.textContent = 'Load older messages';
+                lb.onclick = () => loadChatMessages(true);
+                frag.appendChild(lb);
+            }
+            msgs.forEach(m => frag.appendChild(buildChatMsg(m)));
+            el.insertBefore(frag, el.firstChild);
+            CHAT.lastId = msgs[0]?.id ?? CHAT.lastId;
+        } else {
+            el.innerHTML = '';
+            if (res.has_more) {
+                const lb = document.createElement('div');
+                lb.className = 'chat-load-more';
+                lb.textContent = 'Load older messages';
+                lb.onclick = () => loadChatMessages(true);
+                el.appendChild(lb);
+            }
+            msgs.forEach(m => el.appendChild(buildChatMsg(m)));
+            // Set lastPollId to newest message id
+            if (msgs.length) CHAT.pollLastId = msgs[msgs.length - 1].id;
+            scrollChatBottom();
+        }
+    } catch (err) {
+        console.warn('Chat load failed:', err.message);
+    }
+}
+
+function buildChatMsg(m) {
+    const isOwn = m.user_id === S.user?.id;
+    const isSys = m.type === 'system';
+    if (isSys) {
+        const d = document.createElement('div');
+        d.className = 'chat-sys';
+        d.textContent = m.message;
+        return d;
+    }
+    const div = document.createElement('div');
+    div.className = 'chat-msg' + (isOwn ? ' own' : '');
+    div.dataset.msgId = m.id;
+    const color = CHAT.roleColors[m.user_role] ?? '#6c757d';
+    const initials = m.user_name.charAt(0).toUpperCase();
+    // Highlight @mentions
+    const msgText = m.message.replace(/@(\w[\w\s]*?)(?=\s|$|@)/g, '<span class="chat-mention">@$1</span>');
+    div.innerHTML = `
+    <div class="chat-msg-header">
+      <div class="chat-msg-avatar" style="background:${color}">${initials}</div>
+      <span class="chat-msg-name">${esc(m.user_name)}</span>
+      <span class="chat-msg-time">${esc(m.time_ago)}</span>
+      ${isOwn ? `<button class="btn-rm" onclick="deleteChatMsg(${m.id},this)" title="Delete" style="font-size:.6rem;padding:1px 5px;margin-left:4px"><i class="bi bi-x"></i></button>` : ''}
+    </div>
+    <div class="chat-msg-body">${msgText}</div>`;
+    return div;
+}
+
+/* ── POLL for new messages ────────────────────────────── */
+CHAT.pollLastId = 0;
+
+function startChatPoll() {
+    stopChatPoll();
+    CHAT.pollTimer = setInterval(pollNewMessages, CHAT.pollInterval);
+}
+
+function stopChatPoll() {
+    if (CHAT.pollTimer) {
+        clearInterval(CHAT.pollTimer);
+        CHAT.pollTimer = null;
+    }
+}
+
+async function pollNewMessages() {
+    try {
+        let url = `/chat/poll?channel=${CHAT.channel}&after_id=${CHAT.pollLastId}`;
+        if (CHAT.channelKey) url += '&channel_key=' + encodeURIComponent(CHAT.channelKey);
+        const res = await apiFetch(url);
+        const msgs = res.data ?? [];
+        if (msgs.length) {
+            CHAT.pollLastId = res.last_id;
+            const el = document.getElementById('chatMessages');
+            // Remove empty state
+            el.querySelector('.chat-empty')?.remove();
+            const playSoundFor = msgs.some(m => m.user_id !== S.user?.id);
+            const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+            msgs.forEach(m => {
+                // Skip if already rendered
+                if (!el.querySelector(`[data-msg-id="${m.id}"]`)) {
+                    el.appendChild(buildChatMsg(m));
+                    // Unread badge if chat is closed or user scrolled up
+                    if (!CHAT.open || !wasAtBottom) {
+                        CHAT.unread++;
+                        showChatBadge(CHAT.unread);
+                    }
+                }
+            });
+            if (playSoundFor) playChatSound();
+            if (wasAtBottom) scrollChatBottom();
+        }
+    } catch { }
+}
+
+/* ── SEND ─────────────────────────────────────────────── */
+async function sendChatMessage() {
+    const ta = document.getElementById('chatInput');
+    const msg = ta.value.trim();
+    if (!msg) return;
+    const btn = document.getElementById('chatSendBtn');
+    btn.disabled = true;
+    try {
+        // Extract @mention user ids
+        const mentionIds = [];
+        const mentionRegex = /@([\w ]+?)(?=\s|$|@)/g;
+        let match;
+        while ((match = mentionRegex.exec(msg)) !== null) {
+            const name = match[1].trim().toLowerCase();
+            const u = CHAT.users.find(u => u.name.toLowerCase() === name || u.name.toLowerCase().startsWith(
+                name));
+            if (u && !mentionIds.includes(u.id)) mentionIds.push(u.id);
+        }
+        const payload = {
+            message: msg,
+            channel: CHAT.channel,
+            channel_key: CHAT.channelKey,
+            collection_id: S.activeId,
+            mentions: mentionIds,
+        };
+        const res = await fetch(`${API}/chat/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error ?? 'Send failed');
+        ta.value = '';
+        ta.style.height = '';
+        hideMentionDropdown();
+        // Append own message immediately
+        const el = document.getElementById('chatMessages');
+        el.querySelector('.chat-empty')?.remove();
+        el.appendChild(buildChatMsg(d.data));
+        CHAT.pollLastId = d.data.id;
+        scrollChatBottom();
+    } catch (err) {
+        toast('Message failed: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+/* ── KEYBOARD SHORTCUTS ───────────────────────────────── */
+function chatKeyDown(e) {
+    if (CHAT.mentionVisible) {
+        const items = [...document.querySelectorAll('.chat-mention-item')];
+        const active = document.querySelector('.chat-mention-item.active-hint');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const i = items.indexOf(active);
+            items[(i + 1) % items.length]?.classList.add('active-hint');
+            active?.classList.remove('active-hint');
+            return;
+        }
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const i = items.indexOf(active);
+            items[(i - 1 + items.length) % items.length]?.classList.add('active-hint');
+            active?.classList.remove('active-hint');
+            return;
+        }
+        if (e.key === 'Tab' || e.key === 'Enter') {
+            e.preventDefault();
+            const sel = active ?? items[0];
+            if (sel) sel.click();
+            return;
+        }
+        if (e.key === 'Escape') {
+            hideMentionDropdown();
+            return;
+        }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+    }
+}
+
+function chatInputChange(ta) {
+    // Auto-resize
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 90) + 'px';
+    // @mention detection
+    const val = ta.value,
+        cursor = ta.selectionStart;
+    const before = val.substring(0, cursor);
+    const match = before.match(/@([\w ]*)$/);
+    if (match) {
+        CHAT.mentionQuery = match[1];
+        showMentionDropdown(match[1]);
+    } else {
+        hideMentionDropdown();
+    }
+}
+
+function showMentionDropdown(query) {
+    const dd = document.getElementById('chatMentionDropdown');
+    const filtered = CHAT.users.filter(u => u.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6);
+    if (!filtered.length) {
+        hideMentionDropdown();
+        return;
+    }
+    dd.innerHTML = '';
+    filtered.forEach(u => {
+        const item = document.createElement('div');
+        item.className = 'chat-mention-item';
+        const color = CHAT.roleColors[u.role] ?? '#6c757d';
+        item.innerHTML = `<div class="chat-msg-avatar" style="background:${color};width:18px;height:18px;font-size:.55rem">${u.name.charAt(0).toUpperCase()}</div>
+      <span style="font-size:.74rem;font-weight:600">${esc(u.name)}</span>
+      <span style="font-size:.67rem;color:var(--muted)">${u.role}</span>`;
+        item.onclick = () => insertMention(u.name);
+        dd.appendChild(item);
+    });
+    dd.style.display = 'block';
+    CHAT.mentionVisible = true;
+    dd.querySelector('.chat-mention-item')?.classList.add('active-hint');
+}
+
+function hideMentionDropdown() {
+    document.getElementById('chatMentionDropdown').style.display = 'none';
+    CHAT.mentionVisible = false;
+}
+
+function insertMention(name) {
+    const ta = document.getElementById('chatInput');
+    const val = ta.value,
+        cursor = ta.selectionStart;
+    const before = val.substring(0, cursor).replace(/@[\w ]*$/, '@' + name + ' ');
+    ta.value = before + val.substring(cursor);
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = before.length;
+    hideMentionDropdown();
+}
+
+async function loadChatUsers() {
+    try {
+        const r = await apiFetch('/chat/users');
+        CHAT.users = r.data ?? [];
+        updateChatPresenceUI();
+    } catch { }
+}
+
+function updateChatPresenceUI() {
+    const dot = document.getElementById('chatOnlineDot');
+    const countEl = document.getElementById('chatOnlineCount');
+    if (!dot || !countEl) return;
+    const users = CHAT.users || [];
+    // determine online flag by common keys
+    const onlineCount = users.filter(u => u.online === true || u.is_online === true || (u.status && u.status === 'online')).length;
+    if (onlineCount > 0) {
+        dot.style.display = 'inline-block';
+        dot.style.background = 'var(--green)';
+        dot.style.boxShadow = '0 0 6px var(--green)';
+        countEl.textContent = `${onlineCount} online`;
+    } else {
+        dot.style.display = 'inline-block';
+        dot.style.background = 'var(--muted)';
+        dot.style.boxShadow = 'none';
+        countEl.textContent = '';
+    }
+}
+
+// Emoji picker
+const EMOJIS = ['😀','😁','😂','🤣','😊','😍','😎','😅','😢','😡','👍','👎','🙏','🔥','🎉','💯','✨','🤝','🤖','📎','🧠','🚀','📣','🛠️','🔒','🔔','📌','📝','⚠️','✅','❌'];
+
+function buildEmojiPicker() {
+    let wrap = document.getElementById('chatEmojiPicker');
+    if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.id = 'chatEmojiPicker';
+        wrap.className = 'chat-emoji-picker';
+        document.body.appendChild(wrap);
+    }
+    // Move existing picker into body if not already
+    if (wrap.parentElement !== document.body) document.body.appendChild(wrap);
+    if (wrap.dataset.built) return;
+    // ensure hidden by default
+    wrap.style.display = 'none';
+    wrap.style.position = 'fixed';
+    wrap.style.zIndex = 1400;
+    EMOJIS.forEach(e => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = e;
+        btn.onclick = () => insertEmoji(e);
+        wrap.appendChild(btn);
+    });
+    wrap.dataset.built = '1';
+}
+
+function toggleEmojiPicker() {
+    const p = document.getElementById('chatEmojiPicker');
+    const btn = document.getElementById('chatEmojiBtn');
+    if (!p || !btn) return;
+    const comp = window.getComputedStyle(p);
+    const isHidden = comp.display === 'none' || p.style.display === 'none' || p.hidden;
+    if (!isHidden) {
+        p.style.display = 'none';
+        return;
+    }
+    buildEmojiPicker();
+    // show first so dimensions are measurable
+    p.style.display = 'grid';
+    p.style.width = p.style.width || '260px';
+    requestAnimationFrame(() => {
+        const rect = btn.getBoundingClientRect();
+        const pw = p.offsetWidth || 260;
+        const ph = p.offsetHeight || 200;
+        // Position above the button by default, try to keep within viewport
+        let left = rect.left;
+        if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+        if (left < 8) left = 8;
+        let top = rect.top - ph - 8;
+        // if not enough space above, place above input area (below)
+        if (top < 8) top = rect.bottom + 8;
+        p.style.left = left + 'px';
+        p.style.top = top + 'px';
+    });
+}
+
+function insertEmoji(emoji) {
+    const ta = document.getElementById('chatInput');
+    if (!ta) return;
+    const start = ta.selectionStart || 0;
+    const end = ta.selectionEnd || 0;
+    ta.value = ta.value.substring(0, start) + emoji + ta.value.substring(end);
+    ta.focus();
+    const pos = start + emoji.length;
+    ta.selectionStart = ta.selectionEnd = pos;
+}
+
+function initChatAudio() {
+    try {
+        const audio = document.createElement('audio');
+        audio.id = 'chatMsgAudio';
+        audio.preload = 'auto';
+        audio.style.display = 'none';
+        // try common asset names (if present on server)
+        const srcs = ['/assets/msg.mp3', '/assets/msg.ogg'];
+        srcs.forEach(s => {
+            const src = document.createElement('source');
+            src.src = s;
+            audio.appendChild(src);
+        });
+        document.body.appendChild(audio);
+        CHAT.audioEl = audio;
+        CHAT.muted = localStorage.getItem('chatMuted') === '1';
+        audio.muted = !!CHAT.muted;
+        updateMuteButton();
+    } catch (err) {
+        CHAT.audioEl = null;
+    }
+}
+
+function playChatSound() {
+    try {
+        if (CHAT.muted) return;
+        if (CHAT.audioEl) {
+            const p = CHAT.audioEl.play();
+            if (p && p.catch) p.catch(() => {
+                // fallback to WebAudio if play() blocked
+                playChatTone();
+            });
+            return;
+        }
+        playChatTone();
+    } catch (err) { }
+}
+
+function playChatTone() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 750;
+        g.gain.value = 0.02;
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start();
+        setTimeout(() => { try { o.stop(); ctx.close(); } catch {} }, 120);
+    } catch { }
+}
+
+function toggleChatMute() {
+    CHAT.muted = !CHAT.muted;
+    localStorage.setItem('chatMuted', CHAT.muted ? '1' : '0');
+    if (CHAT.audioEl) CHAT.audioEl.muted = CHAT.muted;
+    updateMuteButton();
+}
+
+function updateMuteButton() {
+    const b = document.getElementById('chatMuteBtn');
+    if (!b) return;
+    if (CHAT.muted) b.classList.add('muted');
+    else b.classList.remove('muted');
+    const ic = b.querySelector('i');
+    if (ic) ic.className = CHAT.muted ? 'bi bi-bell-slash' : 'bi bi-bell';
+}
+
+async function deleteChatMsg(id, btn) {
+    if (!confirm('Delete this message?')) return;
+    try {
+        await apiFetch('/chat/messages/' + id, {
+            method: 'DELETE'
+        });
+        btn.closest('.chat-msg')?.remove();
+    } catch (err) {
+        toast('Delete failed: ' + err.message, 'error');
+    }
+}
+
+function showChatBadge(count) {
+    const b = document.getElementById('chatBadge');
+    b.textContent = count > 9 ? '9+' : count;
+    b.classList.add('show');
+}
+
+function clearChatBadge() {
+    CHAT.unread = 0;
+    const b = document.getElementById('chatBadge');
+    b.textContent = '';
+    b.classList.remove('show');
+}
+
+function scrollChatBottom() {
+    const el = document.getElementById('chatMessages');
+    if (el) el.scrollTop = el.scrollHeight;
+}
+
+// Start background poll even when chat is closed (for badge updates)
+// Uses a slower interval when closed
+let _bgChatTimer = null;
+
+function startBgChatPoll() {
+    _bgChatTimer = setInterval(async () => {
+        if (CHAT.open) return; // foreground poll handles it
+        try {
+            let url = `/chat/poll?channel=general&after_id=${CHAT.pollLastId}`;
+            const r = await apiFetch(url);
+            const newMsgs = (r.data ?? []);
+            if (newMsgs.length) {
+                CHAT.pollLastId = r.last_id;
+                CHAT.unread += newMsgs.length;
+                showChatBadge(CHAT.unread);
+                const playSoundFor = newMsgs.some(m => m.user_id !== S.user?.id);
+                if (playSoundFor) playChatSound();
+            }
+        } catch { }
+    }, 10000); // every 10s in background
 }
 
 /* ============================================================
