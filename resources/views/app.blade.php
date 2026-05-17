@@ -41,9 +41,6 @@
             <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
             <div class="login-demo">
                 <strong>Demo account:</strong><br>
-                {{-- admin@apidocs.dev / Admin@1234 (Admin)<br>
-                editor@apidocs.dev / Editor@1234 (Editor)<br>
-                viewer@apidocs.dev / Viewer@1234 (Viewer) --}}
                 guest@company.dev / Guest1234 (Viewer)
             </div>
             <div class="login-footer">Contact your admin for full access &nbsp;·&nbsp; <span

@@ -708,14 +708,16 @@ function buildRunner(ep) {
 
     // Pre-fill query params
     let qRows = '';
-    (ep.query ?? [])
-        .filter(q => !q.disabled).forEach(q => {
-            qRows += `<div class="runner-param-row">
-      <input type="text" class="r-key" placeholder="key" value="${esc(q.key)}">
-      <input type="text" class="r-val" placeholder="value" value="${esc(q.value)}">
+    (ep.query ?? []).forEach(q => {
+        const key = q.key ?? q.name ?? '';
+        if (!key) return;
+        const value = q.value ?? q.default ?? q.raw ?? '';
+        qRows += `<div class="runner-param-row">
+      <input type="text" class="r-key" placeholder="key" value="${esc(key)}">
+      <input type="text" class="r-val" placeholder="value" value="${esc(value)}">
       <button class="btn-rm" onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>
     </div>`;
-        });
+    });
 
     // Pre-fill headers — inject real bearer value directly
     const bearerVal = S.globalBearer ? 'Bearer ' + S.globalBearer : '';
