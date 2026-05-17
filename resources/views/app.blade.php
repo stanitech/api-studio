@@ -46,7 +46,7 @@
                 viewer@apidocs.dev / Viewer@1234 (Viewer) --}}
                 guest@company.dev / Guest1234 (Viewer)
             </div>
-            <div class="login-footer">Contact your admin for access &nbsp;·&nbsp; <span
+            <div class="login-footer">Contact your admin for full access &nbsp;·&nbsp; <span
                     style="color:var(--accent)">{{ config('app.name') }}</span></div>
         </div>
     </div>
@@ -265,8 +265,8 @@
                     <div class="mb-3">
                         <label class="form-label">Path Variables</label>
                         <div class="dynamic-params" id="pathVars"></div>
-                        <button class="add-param-btn mt-2" onclick="addParam('pathVars')"><i
-                                class="bi bi-plus"></i> Add</button>
+                        <button class="add-param-btn mt-2" onclick="addParam('pathVars')"><i class="bi bi-plus"></i>
+                            Add</button>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Query Parameters</label>
@@ -547,7 +547,8 @@
             <span class="chat-header-title"><i class="bi bi-chat-dots me-1" style="color:var(--accent)"></i>Team
                 Chat</span>
             <span id="chatOnlineCount" style="font-size:.66rem;color:var(--muted)"></span>
-            <button class="chat-mute-btn" id="chatMuteBtn" title="Toggle sound"><i class="bi bi-bell" style="color:var(--text)"></i></button>
+            <button class="chat-mute-btn" id="chatMuteBtn" title="Toggle sound"><i class="bi bi-bell"
+                    style="color:var(--text)"></i></button>
             <button class="chat-close-btn" onclick="toggleChat()" title="Close chat"><i
                     class="bi bi-x-lg"></i></button>
         </div>
@@ -592,15 +593,16 @@
                 <kbd
                     style="background:var(--text); color:var(--bg2); border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:.62rem">Shift+Enter</kbd>
                 <span class="me" style="margin-right: 5.5rem">new line</span>
-                 <i class="bi bi-code-slash" style="color:var(--accent)"></i> <span class="text-capitalize">stan</span>
+                <i class="bi bi-code-slash" style="color:var(--accent)"></i> <span
+                    class="text-capitalize">stan</span>
 
             </div>
         </div>
     </div>
 
     <div class="toast-stack" id="toastStack"></div>
-    <button id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i
-            class="bi bi-chevron-up" style="color:var(--text)"></i></button>
+    <button id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="bi bi-chevron-up"
+            style="color:var(--text)"></i></button>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
     @verbatim
         <script src="/js/app.js"></script>

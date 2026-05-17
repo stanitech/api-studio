@@ -269,18 +269,61 @@ function renderUserPill() {
 /* ============================================================
    OLLAMA / AI STATUS
 ============================================================ */
+function normalizeModelLabel(label) {
+    if (!label) return { statusLabel: '', modelBadge: '' };
+
+    // Check for parentheses format: "Model (Provider)"
+    const match = /\s*\(([^)]+)\)\s*$/.exec(label);
+    if (match) {
+        return {
+            statusLabel: match[1],
+            modelBadge: label.slice(0, match.index).trim(),
+        };
+    }
+
+    // Map cloud models to their providers
+    const providerMap = {
+        'gpt-4o': 'OpenAI',
+        'gpt-4o mini': 'OpenAI',
+        'claude sonnet 4.5': 'Anthropic',
+        'claude haiku 4.5': 'Anthropic',
+        'gemini 2.0 flash': 'Google',
+        'gemini 2.5 flash': 'Google',
+    };
+
+    const lowerLabel = label.toLowerCase();
+    for (const [key, provider] of Object.entries(providerMap)) {
+        if (lowerLabel.includes(key)) {
+            return {
+                statusLabel: provider,
+                modelBadge: label,
+            };
+        }
+    }
+
+    // Fallback: return label as-is
+    return { statusLabel: label, modelBadge: label };
+}
+
 async function checkOllama() {
     try {
         const r = await apiFetch('/ai/status');
         S.ollamaOnline = r.online;
         if (!S.cloudProvider) S.ollamaModel = r.default_model ?? S.ollamaModel;
-        document.getElementById('statusDot').className = 'status-dot ' + (r.online ? 'online' : 'offline');
-        document.getElementById('statusLabel').textContent = r.online ? 'Ollama' : 'Offline';
-        document.getElementById('modelBadge').textContent = S.cloudLabel ?? S.ollamaModel;
-        if (r.online) loadModels();
+        const online = S.cloudProvider ? true : r.online;
+        const label = S.cloudLabel ?? S.ollamaModel;
+        const parts = normalizeModelLabel(label);
+        document.getElementById('statusDot').className = 'status-dot ' + (online ? 'online' : 'offline');
+        document.getElementById('statusLabel').textContent = online ? parts.statusLabel : 'Offline';
+        document.getElementById('modelBadge').textContent = parts.modelBadge;
+        if (!S.cloudProvider && r.online) loadModels();
     } catch {
-        document.getElementById('statusDot').className = 'status-dot offline';
-        document.getElementById('statusLabel').textContent = 'Offline';
+        const online = !!S.cloudProvider;
+        const label = S.cloudLabel ?? S.ollamaModel;
+        const parts = normalizeModelLabel(label);
+        document.getElementById('statusDot').className = 'status-dot ' + (online ? 'online' : 'offline');
+        document.getElementById('statusLabel').textContent = online ? parts.statusLabel : 'Offline';
+        document.getElementById('modelBadge').textContent = parts.modelBadge;
     }
 }
 async function loadModels() {
@@ -311,7 +354,9 @@ function openModelModal() {
                 ['apidocs_cprov', 'apidocs_cmodel', 'apidocs_clabel'].forEach(k => localStorage
                     .removeItem(k));
                 S.ollamaModel = m.name;
-                document.getElementById('modelBadge').textContent = m.name;
+                const parts = normalizeModelLabel(m.name);
+                document.getElementById('statusLabel').textContent = parts.statusLabel;
+                document.getElementById('modelBadge').textContent = parts.modelBadge;
                 bootstrap.Modal.getInstance(document.getElementById('modelModal'))?.hide();
                 syncCloudUI();
                 toast('Model: ' + m.name, 'ai');
@@ -363,9 +408,10 @@ function activateCloud(p, m, l) {
     localStorage.setItem('apidocs_cprov', p);
     localStorage.setItem('apidocs_cmodel', m);
     localStorage.setItem('apidocs_clabel', l);
-    document.getElementById('modelBadge').textContent = l;
+    const parts = normalizeModelLabel(l);
+    document.getElementById('modelBadge').textContent = parts.modelBadge;
     document.getElementById('statusDot').className = 'status-dot online';
-    document.getElementById('statusLabel').textContent = p.charAt(0).toUpperCase() + p.slice(1);
+    document.getElementById('statusLabel').textContent = parts.statusLabel;
     bootstrap.Modal.getInstance(document.getElementById('modelModal'))?.hide();
     syncCloudUI();
     toast('Cloud model: ' + l, 'ai');
