@@ -1646,6 +1646,9 @@ function openEndpointModal(ep = null) {
         c.style.color = sel ? '#fff' : '';
         c.style.borderColor = sel ? MC[c.dataset.method] : '';
     });
+    const pc = document.getElementById('pathVars');
+    pc.innerHTML = '';
+    (ep?.path_vars ?? []).forEach(p => addParam('pathVars', p.key, p.value));
     const qc = document.getElementById('queryParams');
     qc.innerHTML = '';
     (ep?.query ?? []).forEach(q => addParam('queryParams', q.key, q.value));
@@ -1684,6 +1687,11 @@ async function saveEndpoint() {
         toast('Load a collection first', 'error');
         return;
     }
+    const pathVars = [...document.querySelectorAll('#pathVars .param-row')].map(r => ({
+        key: r.querySelector('.param-key').value,
+        value: r.querySelector('.param-val').value,
+        disabled: false,
+    })).filter(p => p.key);
     const query = [...document.querySelectorAll('#queryParams .param-row')].map(r => ({
         key: r.querySelector('.param-key').value,
         value: r.querySelector('.param-val').value,
@@ -1700,6 +1708,7 @@ async function saveEndpoint() {
         auth: {
             type: document.getElementById('epAuth').value
         },
+        path_vars: pathVars,
         query,
         body: rawBody ? {
             mode: 'raw',

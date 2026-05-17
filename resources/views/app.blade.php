@@ -124,7 +124,7 @@
         <!-- SIDEBAR -->
         <aside class="sidebar" id="sidebar">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 15px 0">
-                <div class="sidebar-heading" style="padding:0;margin:0">Sections</div>
+                <div class="sidebar-heading" style="padding:0;margin:0">Folders</div>
                 <button id="sidebarClose" onclick="toggleSidebar()"
                     style="display:none;background:transparent;border:none;color:var(--muted);font-size:.95rem;cursor:pointer"><i
                         class="bi bi-x-lg"></i></button>
@@ -261,6 +261,12 @@
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea class="form-control" id="epDesc" rows="3" placeholder="What does this endpoint do?"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Path Variables</label>
+                        <div class="dynamic-params" id="pathVars"></div>
+                        <button class="add-param-btn mt-2" onclick="addParam('pathVars')"><i
+                                class="bi bi-plus"></i> Add</button>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Query Parameters</label>
