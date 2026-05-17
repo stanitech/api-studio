@@ -1652,6 +1652,9 @@ function openEndpointModal(ep = null) {
     const qc = document.getElementById('queryParams');
     qc.innerHTML = '';
     (ep?.query ?? []).forEach(q => addParam('queryParams', q.key, q.value));
+    const hc = document.getElementById('headerParams');
+    hc.innerHTML = '';
+    (ep?.headers ?? []).forEach(h => addParam('headerParams', h.key ?? h.name ?? '', h.value ?? ''));
     new bootstrap.Modal(document.getElementById('endpointModal')).show();
 }
 
@@ -1699,6 +1702,10 @@ async function saveEndpoint() {
         description: '',
     })).filter(p => p.key);
     const rawBody = document.getElementById('epBody').value.trim();
+    const headers = [...document.querySelectorAll('#headerParams .param-row')].map(r => ({
+        key: r.querySelector('.param-key').value,
+        value: r.querySelector('.param-val').value,
+    })).filter(h => h.key);
     const payload = {
         name,
         method,
@@ -1710,6 +1717,7 @@ async function saveEndpoint() {
         },
         path_vars: pathVars,
         query,
+        headers,
         body: rawBody ? {
             mode: 'raw',
             raw: rawBody

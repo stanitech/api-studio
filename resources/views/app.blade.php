@@ -275,6 +275,12 @@
                                 class="bi bi-plus"></i> Add</button>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Headers</label>
+                        <div class="dynamic-params" id="headerParams"></div>
+                        <button class="add-param-btn mt-2" onclick="addParam('headerParams')"><i
+                                class="bi bi-plus"></i> Add</button>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Body <span style="color:var(--muted);font-size:.7rem">(raw
                                 JSON)</span></label>
                         <textarea class="form-control" id="epBody" rows="4" placeholder='{"key":"value"}'></textarea>
