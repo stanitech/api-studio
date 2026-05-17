@@ -2158,8 +2158,8 @@
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background: var(--green);
-            box-shadow: 0 0 5px var(--green);
+            background: var(--muted);
+            box-shadow: none;
             flex-shrink: 0
         }
 
@@ -2335,6 +2335,20 @@
             align-items: center;
             gap: 7px;
             transition: background .12s
+        }
+
+        .chat-mention-item .mention-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+            box-shadow: none;
+            flex-shrink: 0;
+        }
+
+        .chat-mention-item .mention-dot.online {
+            background: var(--green);
+            box-shadow: 0 0 5px var(--green);
         }
 
         .chat-mention-item:hover,

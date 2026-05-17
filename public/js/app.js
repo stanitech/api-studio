@@ -2356,7 +2356,9 @@ function showMentionDropdown(query) {
         const item = document.createElement('div');
         item.className = 'chat-mention-item';
         const color = CHAT.roleColors[u.role] ?? '#6c757d';
-        item.innerHTML = `<div class="chat-msg-avatar" style="background:${color};width:18px;height:18px;font-size:.55rem">${u.name.charAt(0).toUpperCase()}</div>
+        const online = u.online === true || u.is_online === true || (u.status && u.status === 'online');
+        item.innerHTML = `<span class="chat-online-dot mention-dot${online ? ' online' : ''}"></span>
+      <div class="chat-msg-avatar" style="background:${color};width:18px;height:18px;font-size:.55rem">${u.name.charAt(0).toUpperCase()}</div>
       <span style="font-size:.74rem;font-weight:600">${esc(u.name)}</span>
       <span style="font-size:.67rem;color:var(--muted)">${u.role}</span>`;
         item.onclick = () => insertMention(u.name);
