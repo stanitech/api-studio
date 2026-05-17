@@ -1697,7 +1697,11 @@ function openEndpointModal(ep = null) {
     (ep?.path_vars ?? []).forEach(p => addParam('pathVars', p.key, p.value));
     const qc = document.getElementById('queryParams');
     qc.innerHTML = '';
-    (ep?.query ?? []).forEach(q => addParam('queryParams', q.key, q.value));
+    (ep?.query ?? []).forEach(q => addParam(
+        'queryParams',
+        q.key ?? q.name ?? '',
+        q.value ?? q.default ?? q.raw ?? ''
+    ));
     const hc = document.getElementById('headerParams');
     hc.innerHTML = '';
     (ep?.headers ?? []).forEach(h => addParam('headerParams', h.key ?? h.name ?? '', h.value ?? ''));
