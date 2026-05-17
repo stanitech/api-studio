@@ -914,8 +914,17 @@ async function saveRunnerResponse(epId) {
                 'Accept': 'application/json'
             },
             body: JSON.stringify({
-                ...S.lastResp,
-                label
+                collection_id: S.lastResp.collectionId,
+                endpoint_id: S.lastResp.endpointId,
+                endpoint_name: S.lastResp.endpointName,
+                method: S.lastResp.method,
+                url: S.lastResp.url,
+                status_code: S.lastResp.statusCode,
+                response_body: S.lastResp.responseBody,
+                request_headers: S.lastResp.requestHeaders,
+                request_body: S.lastResp.requestBody,
+                response_time_ms: S.lastResp.responseTimeMs,
+                label,
             }),
         });
         const d = await r.json();
