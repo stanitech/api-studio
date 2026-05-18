@@ -40,9 +40,14 @@
                 <label>Email address</label>
                 <input type="email" id="loginEmail" placeholder="you@company.dev" autocomplete="email">
             </div>
-            <div class="login-field">
+            <div class="login-field login-password-field">
                 <label>Password</label>
-                <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+                <div class="password-input-wrap">
+                    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+                    <button type="button" class="password-toggle-btn" id="loginPasswordToggle" aria-label="Show password" onclick="toggleLoginPasswordVisibility()">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
             </div>
             <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
             <div class="login-demo">

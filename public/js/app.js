@@ -145,6 +145,18 @@ function showApp() {
     document.getElementById('appShell').style.display = 'block';
 }
 
+function toggleLoginPasswordVisibility() {
+    const input = document.getElementById('loginPassword');
+    const btn = document.getElementById('loginPasswordToggle');
+    if (!input || !btn) return;
+
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    btn.querySelector('i')?.classList.toggle('bi-eye-slash', isHidden);
+    btn.querySelector('i')?.classList.toggle('bi-eye', !isHidden);
+}
+
 
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
