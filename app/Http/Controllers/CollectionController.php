@@ -112,6 +112,10 @@ class CollectionController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
+        if (!auth()->user()?->isAdmin()) {
+            abort(403, 'Admin only.');
+        }
+
         $this->findOrFail($id);
 
         Storage::disk('local')->delete("collections/{$id}.json");

@@ -863,6 +863,36 @@
             border-left: 2px solid rgba(167, 139, 250, .5)
         }
 
+        .endpoint-card {
+            cursor: grab;
+        }
+
+        .endpoint-card.dragging {
+            opacity: .55;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px rgba(88, 166, 255, .2);
+        }
+
+        .drag-handle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            cursor: grab;
+            font-size: .8rem;
+            flex-shrink: 0;
+            transition: color .15s;
+        }
+
+        .endpoint-header:hover .drag-handle {
+            color: var(--accent);
+        }
+
+        .endpoint-card.dragging .drag-handle {
+            color: var(--accent);
+            cursor: grabbing;
+        }
+
         .endpoint-header {
             padding: 10px 13px;
             cursor: pointer;

@@ -243,6 +243,17 @@ function can(perm) {
     return (u.permissions ?? []).includes(perm);
 }
 
+function isAdmin() {
+    return S.user?.role === 'admin';
+}
+
+function updateCollectionActionsUI() {
+    const deleteBtn = document.getElementById('btnDeleteCollection');
+    if (!deleteBtn) return;
+    deleteBtn.style.display = isAdmin() ? '' : 'none';
+    deleteBtn.disabled = !S.activeId;
+}
+
 function applyRoleUI() {
     const hasWrite = can('write');
     const hasAI = can('ai');
@@ -270,6 +281,8 @@ function applyRoleUI() {
     // Hero "Regen All" button — shown only if user can use AI
     const regenAllBtn = document.getElementById('regenAllBtn');
     if (regenAllBtn) regenAllBtn.style.display = hasAI ? '' : 'none';
+
+    updateCollectionActionsUI();
 }
 
 function renderUserPill() {
@@ -469,6 +482,43 @@ async function loadCollections() {
     }
 }
 
+async function deleteCollection() {
+    if (!isAdmin()) {
+        toast('Admin only', 'error');
+        return;
+    }
+    if (!S.activeId) {
+        toast('No collection selected', 'error');
+        return;
+    }
+    const name = S.activeData?.name || 'current collection';
+    if (!await showConfirmModal(`Delete collection "${name}"? This cannot be undone.`, 'Delete Collection')) {
+        return;
+    }
+    try {
+        await apiFetch('/collections/' + S.activeId, { method: 'DELETE' });
+        localStorage.removeItem('apidocs_active_col');
+        localStorage.removeItem('apidocs_ep_order_' + S.activeId);
+        localStorage.removeItem('apidocs_base_url_' + S.activeId);
+        localStorage.removeItem('apidocs_bearer_' + S.activeId);
+        S.collections = S.collections.filter(c => c.id !== S.activeId);
+        S.activeId = null;
+        S.activeData = null;
+        renderCollectionSelect();
+        if (S.collections.length) {
+            await loadCollection(S.collections[0].id);
+        } else {
+            document.getElementById('collectionView').style.display = 'none';
+            document.getElementById('uploadZone').style.display = 'block';
+            document.getElementById('collectionSelect').value = '';
+            updateCollectionActionsUI();
+        }
+        toast('Collection deleted', 'success');
+    } catch {
+        toast('Delete failed', 'error');
+    }
+}
+
 function renderCollectionSelect() {
     const sel = document.getElementById('collectionSelect');
     const prev = sel.value;
@@ -501,6 +551,19 @@ async function loadCollection(id) {
         S.activeId = id;
         S.activeData = r.data;
         localStorage.setItem('apidocs_active_col', id);
+        S.epOriginalOrder = (S.activeData.endpoints ?? []).reduce((acc, ep, idx) => {
+            acc[ep.id] = idx;
+            return acc;
+        }, {});
+        S.endpointOrder = S.endpointOrder ?? {};
+        if (!S.endpointOrder[id]) {
+            try {
+                S.endpointOrder[id] = JSON.parse(localStorage.getItem('apidocs_ep_order_' + id) || '{}');
+            } catch {
+                S.endpointOrder[id] = {};
+            }
+        }
+        updateCollectionActionsUI();
         // Restore per-collection bearer token
         const perBearer = localStorage.getItem('apidocs_bearer_' + id);
         if (perBearer) {
@@ -586,6 +649,7 @@ function renderGroups(endpoints) {
         const g = ep.group || 'General';
         (groups[g] = groups[g] || []).push(ep);
     });
+    const savedGroupOrder = S.endpointOrder?.[S.activeId] ?? {};
     const nav = document.getElementById('sidebarNav');
     nav.innerHTML = '';
     Object.keys(groups).forEach(g => {
@@ -610,6 +674,16 @@ function renderGroups(endpoints) {
         const sec = document.createElement('section');
         sec.className = 'api-group';
         sec.id = id;
+        const groupOrder = savedGroupOrder[g] ?? [];
+        const orderMap = new Map(groupOrder.map((epId, index) => [epId, index]));
+        const originalOrder = S.epOriginalOrder ?? {};
+        eps.sort((a, b) => {
+            const ia = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+            const ib = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+            if (ia !== ib) return ia - ib;
+            return (originalOrder[a.id] ?? 0) - (originalOrder[b.id] ?? 0);
+        });
+        sec.id = id;
         sec.innerHTML = `<div class="group-header"><h2>${esc(g)}</h2><span class="group-count">${eps.length} ep${eps.length !== 1 ? 's' : ''}</span>
       ${can('ai') ? `<button class="btn-group-ai" onclick="batchGroup('${esc(g)}')"><i class="bi bi-stars"></i> AI Docs ${done}/${eps.length}</button>` : '<span style="font-size:.64rem;color:var(--muted);margin-left:auto;display:flex;align-items:center;gap:3px"><i class="bi bi-stars"></i> ' + done + '/' + eps.length + ' AI docs</span>'}
     </div><div class="ep-list"></div>`;
@@ -631,7 +705,8 @@ function buildCard(ep) {
         `<span class="auth-none"><i class="bi bi-unlock me-1"></i>No Auth</span>`;
     const aiB = ep.ai_summary ? `<span class="ai-badge"><i class="bi bi-stars"></i>AI</span>` : '';
     card.innerHTML = `
-    <div class="endpoint-header" onclick="toggleCard(this)">
+    <div class="endpoint-header" onclick="toggleCard(this)" title="Click to expand / drag to reorder">
+      <span class="drag-handle" title="Drag to reorder"><i class="bi bi-arrow-move"></i></span>
       <span class="method-badge" style="background:${col}">${esc(ep.method)}</span>
       <div style="flex:1;min-width:0">
         <div class="endpoint-name">${esc(ep.name)}</div>
@@ -647,7 +722,56 @@ function buildCard(ep) {
       </div>
     </div>
     <div class="endpoint-body" id="body-${ep.id}">${buildBody(ep)}</div>`;
+    card.setAttribute('draggable', 'true');
+    card.addEventListener('dragstart', e => handleEndpointDragStart(e, ep.id));
+    card.addEventListener('dragover', handleEndpointDragOver);
+    card.addEventListener('drop', e => handleEndpointDrop(e, ep.id));
+    card.addEventListener('dragend', handleEndpointDragEnd);
     return card;
+}
+
+function handleEndpointDragStart(event, id) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', id);
+    event.target.classList.add('dragging');
+}
+
+function handleEndpointDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+}
+
+function handleEndpointDrop(event, targetId) {
+    event.preventDefault();
+    event.stopPropagation();
+    const dragId = event.dataTransfer.getData('text/plain');
+    if (!dragId || dragId === targetId) return;
+    const dragEl = document.getElementById('ep-' + dragId);
+    const targetEl = document.getElementById('ep-' + targetId);
+    if (!dragEl || !targetEl || dragEl.parentElement !== targetEl.parentElement) return;
+    const rect = targetEl.getBoundingClientRect();
+    const insertAfter = event.clientY > rect.top + rect.height / 2;
+    if (insertAfter) {
+        targetEl.parentElement.insertBefore(dragEl, targetEl.nextSibling);
+    } else {
+        targetEl.parentElement.insertBefore(dragEl, targetEl);
+    }
+    saveEndpointOrder();
+}
+
+function handleEndpointDragEnd(event) {
+    event.target.classList.remove('dragging');
+}
+
+function saveEndpointOrder() {
+    if (!S.activeId) return;
+    const order = {};
+    document.querySelectorAll('.api-group').forEach(groupEl => {
+        const heading = groupEl.querySelector('.group-header h2')?.textContent.trim() || 'General';
+        order[heading] = [...groupEl.querySelectorAll('.ep-list .endpoint-card')].map(card => card.id.replace(/^ep-/, ''));
+    });
+    S.endpointOrder[S.activeId] = order;
+    localStorage.setItem('apidocs_ep_order_' + S.activeId, JSON.stringify(order));
 }
 
 function buildBody(ep) {
@@ -1045,7 +1169,7 @@ async function openSavedResponsesModal() {
 }
 
 async function deleteSavedResp(id, btn) {
-    if (!confirm('Delete this saved response?')) return;
+    if (!await showConfirmModal('Delete this saved response?', 'Delete Saved Response')) return;
     try {
         await apiFetch('/saved-responses/' + id, {
             method: 'DELETE'
@@ -1837,7 +1961,7 @@ function editEndpoint(id) {
     if (ep) openEndpointModal(ep);
 }
 async function deleteEndpoint(id) {
-    if (!confirm('Delete this endpoint?')) return;
+    if (!await showConfirmModal('Delete this endpoint?', 'Delete Endpoint')) return;
     try {
         const res = await fetch(`${API}/collections/${S.activeId}/endpoints/${id}`, {
             method: 'DELETE',
@@ -2074,7 +2198,7 @@ async function toggleUserActive(id, current) {
 }
 
 async function deleteUser(id, btn) {
-    if (!confirm('Delete this developer account?')) return;
+    if (!await showConfirmModal('Delete this developer account?', 'Delete Account')) return;
     try {
         await apiFetch('/users/' + id, {
             method: 'DELETE'
@@ -2695,7 +2819,7 @@ function updateMuteButton() {
 }
 
 async function deleteChatMsg(id, btn) {
-    if (!confirm('Delete this message?')) return;
+    if (!await showConfirmModal('Delete this message?', 'Delete Message')) return;
     try {
         await apiFetch('/chat/messages/' + id, {
             method: 'DELETE'
@@ -2766,6 +2890,29 @@ async function apiFetch(path, opts = {}) {
 
 function findEp(id) {
     return (S.activeData?.endpoints ?? []).find(e => e.id === id);
+}
+
+function showConfirmModal(message, title = 'Confirm Action') {
+    return new Promise(resolve => {
+        const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        const okBtn = document.getElementById('confirmOkBtn');
+        const cancelHandler = () => {
+            okBtn.removeEventListener('click', confirmHandler);
+            document.getElementById('confirmModal').removeEventListener('hidden.bs.modal', cancelHandler);
+            resolve(false);
+        };
+        const confirmHandler = () => {
+            okBtn.removeEventListener('click', confirmHandler);
+            document.getElementById('confirmModal').removeEventListener('hidden.bs.modal', cancelHandler);
+            modal.hide();
+            resolve(true);
+        };
+        okBtn.addEventListener('click', confirmHandler);
+        document.getElementById('confirmModal').addEventListener('hidden.bs.modal', cancelHandler, { once: true });
+        modal.show();
+    });
 }
 
 function toast(msg, type = 'success') {

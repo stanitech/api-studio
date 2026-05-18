@@ -147,6 +147,9 @@
                     style="width:100%;justify-content:center;font-size:.73rem" onclick="openUploadModal()">
                     <i class="bi bi-file-earmark-arrow-up"></i> Import Collection
                 </button>
+                <button class="nav-btn danger" id="btnDeleteCollection" onclick="deleteCollection()" style="display:none;width:100%;justify-content:center;font-size:.73rem" title="Admin only — delete the current collection">
+                    <i class="bi bi-trash3"></i> Delete Collection
+                </button>
             </div>
             <footer style="font-size:.72rem;color:var(--muted);text-align:center;padding:12px 18px;">
                 <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
@@ -189,6 +192,25 @@
             </main>
         </div>
     </div><!-- /appShell -->
+
+    <!-- ══ CONFIRM MODAL ════════════════════════════════════ -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title" id="confirmTitle">Confirm Action</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmMessage" style="margin:0"></p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger btn-sm" id="confirmOkBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ══ UPLOAD MODAL ══════════════════════════════════════ -->
     <div class="modal fade" id="uploadModal" tabindex="-1">

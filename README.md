@@ -204,6 +204,10 @@ Output format mirrors Postman's AI docs: Overview → Use Case → Auth → Para
 - Run endpoint directly on the UI based on base URL configuration
 - Add option to access or run cloud models
 - **Batch docs**: The "Generate All Docs" button skips endpoints that already have summaries. Use "Regenerate All" to redo everything.
+- fix obfuscator issues
+- can you add user statistics (small chart) showing number of times a user access on (daily, weekly, month, all time...), with their ip address and only admin will have access to it. you can add the statistics on th side bar or find a best place that can fit
+
+
 
 
 
