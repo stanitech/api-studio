@@ -20,7 +20,7 @@ class AuthMiddleware
             return response()->json(['error' => 'Account deactivated.'], 403);
         }
 
-        if ($permission && !Auth::user()->can($permission)) {
+        if ($permission && !Auth::user()->hasPermission($permission)) {
             return response()->json(['error' => "Insufficient permissions: {$permission} required."], 403);
         }
 

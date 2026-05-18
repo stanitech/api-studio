@@ -35,6 +35,10 @@ const S = {
     },
     lastResp: null,
     theme: localStorage.getItem('apidocs_theme') ?? 'dark',
+    users: [],
+    editingUserId: null,
+    editingUserPerms: [],
+    editingUserRoleOriginal: null,
 };
 
 /* ============================================================
@@ -124,12 +128,19 @@ function toggleTheme() {
 /* ============================================================
    AUTH
 ============================================================ */
+function hideInitLoader() {
+    const loader = document.getElementById('initLoader');
+    if (loader) loader.remove();
+}
+
 function showLogin() {
+    hideInitLoader();
     document.getElementById('loginPage').style.display = 'flex';
     document.getElementById('appShell').style.display = 'none';
 }
 
 function showApp() {
+    hideInitLoader();
     document.getElementById('loginPage').style.display = 'none';
     document.getElementById('appShell').style.display = 'block';
 }
@@ -1842,6 +1853,7 @@ async function openUsersModal() {
         toast('Admin only', 'error');
         return;
     }
+    cancelEditUser();
     // Populate collection dropdown
     const sel = document.getElementById('newUserCollection');
     sel.innerHTML = '<option value="">All collections</option>';
@@ -1863,7 +1875,9 @@ function updatePermChips() {
         editor: ['read', 'write', 'run', 'ai'],
         viewer: ['read']
     };
-    const def = defaults[role] ?? ['read'];
+    const defaultPerms = defaults[role] ?? ['read'];
+    const useExistingPerms = S.editingUserId && S.editingUserRoleOriginal === role;
+    const perms = useExistingPerms ? (S.editingUserPerms ?? defaultPerms) : defaultPerms;
     const cont = document.getElementById('permChips');
     cont.innerHTML = '';
     ALLPERMS.forEach(p => {
@@ -1873,7 +1887,7 @@ function updatePermChips() {
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.value = p;
-        cb.checked = def.includes(p);
+        cb.checked = perms.includes(p);
         cb.addEventListener('change', () => {
             lbl.style.borderColor = cb.checked ? 'rgba(88,166,255,.5)' : 'var(--border)';
             lbl.style.color = cb.checked ? 'var(--accent)' : 'var(--text)';
@@ -1894,6 +1908,7 @@ async function loadUsersList() {
     try {
         const r = await apiFetch('/users');
         const users = r.data ?? [];
+        S.users = users;
         el.innerHTML = '';
         if (!users.length) {
             el.innerHTML = '<p style="color:var(--muted);font-size:.8rem">No users yet.</p>';
@@ -1907,8 +1922,7 @@ async function loadUsersList() {
         users.forEach(u => {
             const row = document.createElement('div');
             row.className = 'user-row';
-            const perms = (u.permissions ?? []).map(p => `<span class="perm-chip on">${p}</span>`).join(
-                '');
+            const perms = (u.permissions ?? []).map(p => `<span class="perm-chip on">${p}</span>`).join('');
             row.innerHTML = `
         <div class="u-avatar-lg" style="background:${rc[u.role] ?? '#6c757d'}">${u.name.charAt(0).toUpperCase()}</div>
         <div style="flex:1;min-width:0">
@@ -1924,6 +1938,9 @@ async function loadUsersList() {
           <button class="card-btn" onclick="toggleUserActive(${u.id},${u.is_active})" title="${u.is_active ? 'Deactivate' : 'Activate'}">
             <i class="bi bi-${u.is_active ? 'toggle-on text-success' : 'toggle-off'}"></i>
           </button>
+          <button class="card-btn" onclick="startEditUser(${u.id})" title="Edit user">
+            <i class="bi bi-pencil"></i>
+          </button>
           <button class="card-btn danger" onclick="deleteUser(${u.id},this)">
             <i class="bi bi-trash3"></i>
           </button>
@@ -1935,6 +1952,40 @@ async function loadUsersList() {
     }
 }
 
+function startEditUser(id) {
+    const user = S.users.find(u => u.id === id);
+    if (!user) return;
+    S.editingUserId = id;
+    S.editingUserPerms = user.permissions ?? [];
+    S.editingUserRoleOriginal = user.role;
+    document.getElementById('newUserName').value = user.name;
+    document.getElementById('newUserEmail').value = user.email;
+    document.getElementById('newUserPassword').value = '';
+    document.getElementById('newUserRole').value = user.role;
+    document.getElementById('newUserCollection').value = user.default_collection_id ?? '';
+    document.getElementById('saveUserBtnText').textContent = 'Save changes';
+    document.getElementById('saveUserBtn').querySelector('i').className = 'bi bi-pencil me-1';
+    document.getElementById('cancelEditBtn').classList.remove('d-none');
+    document.getElementById('editingUserLabel').style.display = 'block';
+    updatePermChips();
+}
+
+function cancelEditUser() {
+    S.editingUserId = null;
+    S.editingUserPerms = [];
+    S.editingUserRoleOriginal = null;
+    document.getElementById('newUserName').value = '';
+    document.getElementById('newUserEmail').value = '';
+    document.getElementById('newUserPassword').value = '';
+    document.getElementById('newUserRole').value = 'viewer';
+    document.getElementById('newUserCollection').value = '';
+    document.getElementById('saveUserBtnText').textContent = 'Add Developer';
+    document.getElementById('saveUserBtn').querySelector('i').className = 'bi bi-person-plus me-1';
+    document.getElementById('cancelEditBtn').classList.add('d-none');
+    document.getElementById('editingUserLabel').style.display = 'none';
+    updatePermChips();
+}
+
 async function createUser() {
     const name = document.getElementById('newUserName').value.trim();
     const email = document.getElementById('newUserEmail').value.trim();
@@ -1942,34 +1993,53 @@ async function createUser() {
     const role = document.getElementById('newUserRole').value;
     const colId = document.getElementById('newUserCollection').value || null;
     const perms = [...document.querySelectorAll('#permChips input:checked')].map(c => c.value);
-    if (!name || !email || !pass) {
-        toast('Name, email and password required', 'error');
+    if (!name || !email) {
+        toast('Name and email required', 'error');
         return;
     }
+
+    const payload = {
+        name,
+        email,
+        role,
+        permissions: perms,
+        default_collection_id: colId
+    };
+    if (pass) payload.password = pass;
+
     try {
-        const r = await fetch(`${API}/users`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrf,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                name,
-                email,
-                password: pass,
-                role,
-                permissions: perms,
-                default_collection_id: colId
-            })
-        });
+        let r;
+        if (S.editingUserId) {
+            r = await fetch(`${API}/users/${S.editingUserId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            if (!pass) {
+                toast('Password required for new developer', 'error');
+                return;
+            }
+            payload.password = pass;
+            r = await fetch(`${API}/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+        }
         const d = await r.json();
         if (!r.ok) throw new Error(d.error ?? (d.details ? Object.values(d.details).flat().join(', ') :
-            'Create failed'));
-        toast('"' + name + '" added', 'success');
-        document.getElementById('newUserName').value = '';
-        document.getElementById('newUserEmail').value = '';
-        document.getElementById('newUserPassword').value = '';
+            'Request failed'));
+        toast(S.editingUserId ? '"' + name + '" updated' : '"' + name + '" added', 'success');
+        cancelEditUser();
         await loadUsersList();
     } catch (err) {
         toast('Failed: ' + err.message, 'error');
@@ -2345,7 +2415,7 @@ async function sendChatMessage() {
         CHAT.pollLastId = d.data.id;
         scrollChatBottom();
     } catch (err) {
-        toast('Message failed: ' + err.message, 'error');
+        toast(err.message, 'error');
     } finally {
         btn.disabled = false;
     }

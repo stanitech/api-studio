@@ -18,6 +18,12 @@
 </head>
 
 <body>
+    <div id="initLoader">
+        <div class="page-loader">
+            <div class="spinner"></div>
+            <span>Loading app…</span>
+        </div>
+    </div>
 
     <!-- ══ LOGIN PAGE ══════════════════════════════════════════ -->
     <div id="loginPage">
@@ -438,6 +444,7 @@
                 <div class="modal-body">
                     <div id="usersList" style="margin-bottom:14px"></div>
                     <div class="sec-divider"><span>Add Developer</span></div>
+                    <div id="editingUserLabel" style="display:none;color:var(--accent);font-weight:600;margin:0 0 10px;">Editing user</div>
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label">Name</label>
@@ -477,8 +484,9 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                    <button class="btn btn-primary btn-sm" onclick="createUser()"><i
-                            class="bi bi-person-plus me-1"></i>Add Developer</button>
+                    <button class="btn btn-outline-secondary btn-sm d-none" id="cancelEditBtn" type="button" onclick="cancelEditUser()">Cancel</button>
+                    <button class="btn btn-primary btn-sm" id="saveUserBtn" onclick="createUser()"><i
+                            class="bi bi-person-plus me-1"></i><span id="saveUserBtnText">Add Developer</span></button>
                 </div>
             </div>
         </div>
