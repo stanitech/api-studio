@@ -205,7 +205,8 @@ Output format mirrors Postman's AI docs: Overview → Use Case → Auth → Para
 - Add option to access or run cloud models
 - **Batch docs**: The "Generate All Docs" button skips endpoints that already have summaries. Use "Regenerate All" to redo everything.
 - fix obfuscator issues
-- can you add user statistics (small chart) showing number of times a user access on (daily, weekly, month, all time...), with their ip address and only admin will have access to it. you can add the statistics on th side bar or find a best place that can fit
+- can you add user statistics (small chart) showing number of times a user access the page (eg. daily, weekly, month, all time...), with their ip address and only admin will have access to it. you can add the statistics on the side bar or find a best place that can fit
+- Add back the Local — Ollama model on the AI model modal as an option but let it be available for selection only on local server
 
 
 
