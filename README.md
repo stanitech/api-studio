@@ -1,6 +1,6 @@
 # 📡 API Studio — Laravel + AI
 
-> Dynamic API Documentation Generator with AI-multi-model-powered summaries with realtime developer collaboration, built on Laravel 13.
+> Dynamic API Documentation Generator with AI-multi-model-powered summaries and realtime developer collaboration, built on Laravel 13.
 
 ---
 
