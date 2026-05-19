@@ -44,7 +44,8 @@
                 <label>Password</label>
                 <div class="password-input-wrap">
                     <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
-                    <button type="button" class="password-toggle-btn" id="loginPasswordToggle" aria-label="Show password" onclick="toggleLoginPasswordVisibility()">
+                    <button type="button" class="password-toggle-btn" id="loginPasswordToggle"
+                        aria-label="Show password" onclick="toggleLoginPasswordVisibility()">
                         <i class="bi bi-eye"></i>
                     </button>
                 </div>
@@ -147,7 +148,9 @@
                     style="width:100%;justify-content:center;font-size:.73rem" onclick="openUploadModal()">
                     <i class="bi bi-file-earmark-arrow-up"></i> Import Collection
                 </button>
-                <button class="nav-btn danger" id="btnDeleteCollection" onclick="deleteCollection()" style="display:none;width:100%;justify-content:center;font-size:.73rem" title="Admin only — delete the current collection">
+                <button class="nav-btn danger" id="btnDeleteCollection" onclick="deleteCollection()"
+                    style="display:none;width:100%;justify-content:center;font-size:.73rem"
+                    title="Admin only — delete the current collection">
                     <i class="bi bi-trash3"></i> Delete Collection
                 </button>
             </div>
@@ -471,7 +474,8 @@
                 <div class="modal-body">
                     <div id="usersList" style="margin-bottom:14px"></div>
                     <div class="sec-divider"><span>Add Developer</span></div>
-                    <div id="editingUserLabel" style="display:none;color:var(--accent);font-weight:600;margin:0 0 10px;">Editing user</div>
+                    <div id="editingUserLabel"
+                        style="display:none;color:var(--accent);font-weight:600;margin:0 0 10px;">Editing user</div>
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label">Name</label>
@@ -511,9 +515,11 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                    <button class="btn btn-outline-secondary btn-sm d-none" id="cancelEditBtn" type="button" onclick="cancelEditUser()">Cancel</button>
+                    <button class="btn btn-outline-secondary btn-sm d-none" id="cancelEditBtn" type="button"
+                        onclick="cancelEditUser()">Cancel</button>
                     <button class="btn btn-primary btn-sm" id="saveUserBtn" onclick="createUser()"><i
-                            class="bi bi-person-plus me-1"></i><span id="saveUserBtnText">Add Developer</span></button>
+                            class="bi bi-person-plus me-1"></i><span id="saveUserBtnText">Add
+                            Developer</span></button>
                 </div>
             </div>
         </div>
