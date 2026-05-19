@@ -22,11 +22,11 @@
 /storage/*.key
 /storage/pail
 /vendor
-/database/migrations/*.php
-/database/seeds/*.php
-/database/factories/*.php
-/public
-/app/services/*.php
+database/migrations/*.php
+database/seeds/*.php
+database/factories/*.php
+public
+app/services/*.php
 _ide_helper.php
 Homestead.json
 Homestead.yaml
