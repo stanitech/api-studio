@@ -1,6 +1,6 @@
-# 📡 API Studio — Laravel 13 + Ollama AI + realtime develop collaboration system
+# 📡 API Studio — Laravel + AI
 
-> Dynamic API Documentation Generator with AI-powered summaries using Ollama, built on Laravel 13.
+> Dynamic API Documentation Generator with AI-multi-model-powered summaries with realtime developer collaboration, built on Laravel 13.
 
 ---
 
