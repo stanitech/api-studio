@@ -1,119 +1,183 @@
-# 📡 API Studio — Laravel + AI
+# API Docs — Laravel + team collerboration
 
-> Dynamic API Documentation Generator with AI-multi-model-powered summaries and realtime developer collaboration, built on Laravel 13.
+A lightweight API documentation tool built with Laravel 13 and powered by Multi model AI-assisted endpoint documentation from any json API collections.
 
----
+The goal of the project was to keep things simple:
 
-## ✨ Features
-
-- **Import Postman Collections** — Upload any Postman Collection v2.1 JSON and get instant docs
-- **Dynamic Endpoint CRUD** — Add, edit, and delete endpoints directly in the UI
-- **Ollama AI Summaries** — Generate Postman-style AI documentation per endpoint or for the full collection
-- **SSE Streaming** — AI summaries stream token-by-token in real time
-- **Search & Filter** — Live search across all endpoints, names, URLs, and AI summaries
-- **Persistent Storage** — Collections saved as JSON files, AI summaries cached
+- upload a Postman collection
+- browse and edit endpoints
+- generate readable API documentation using local AI models
 
 ---
 
-## 🚀 Quick Setup
+## Features
 
-### 1. Prerequisites
+- Import Postman Collection v2.1 files
+- Create, edit, and delete endpoints from the UI
+- Generate AI-written endpoint summaries using Ollama
+- Stream AI responses live with SSE
+- Search endpoints by name, URL, method, or summary
+- Store collections locally as JSON files
+- Cache generated summaries
 
-| Tool | Version |
-|------|---------|
-| PHP  | ≥ 8.3   |
-| Composer | latest |
-| Ollama | latest |
+---
 
-### 2. Install Ollama & Pull a Model
+# Getting Started
+
+## Requirements
+
+| Dependency | Version |
+| --- | --- |
+| PHP | 8.3+ |
+| Composer | Latest |
+| Ollama | Latest |
+
+---
+
+## Install Ollama
+
+Download Ollama:
+
+https://ollama.com
+
+Start the Ollama server:
 
 ```bash
-# Install Ollama — https://ollama.com/download
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Start Ollama server
 ollama serve
-
-# Pull a model (pick one)
-ollama pull llama3       # recommended — best docs quality
-ollama pull mistral      # faster, good quality
-ollama pull phi3         # very fast, smaller
-ollama pull gemma2       # Google's model
 ```
 
-### 3. Clone & Install
+Pull a model:
+
+```bash
+# Recommended
+ollama pull llama3
+
+# Alternatives
+ollama pull mistral
+ollama pull phi3
+ollama pull gemma2
+```
+
+### Suggested Models
+
+| Model | Notes |
+| --- | --- |
+| `llama3` | Best overall documentation quality |
+| `mistral` | Faster responses |
+| `phi3` | Lightweight and fast |
+| `gemma2` | Good alternative option |
+
+---
+
+# Installation
+
+Clone the repository and install dependencies:
 
 ```bash
 git clone <your-repo>
 cd api-docs-laravel
 
 composer install
+```
 
+Copy the environment file:
+
+```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-### 4. Configure `.env`
+---
+
+# Environment Configuration
+
+Update your `.env` file:
 
 ```env
-# Ollama
 OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=llama3          # must match what you pulled
+OLLAMA_MODEL=llama3
 OLLAMA_TEMPERATURE=0.3
 OLLAMA_MAX_TOKENS=1024
 
-# App
 APP_URL=http://localhost:8000
-```
-
-### 5. Create Storage Directory
-
-```bash
-mkdir -p storage/app/collections
-php artisan storage:link
-```
-
-### 6. Run
-
-```bash
-php artisan serve
-# → http://localhost:8000
 ```
 
 ---
 
-## 🔌 API Reference
+# Storage Setup
 
-### Collections
+Create the collections directory and link storage:
+
+```bash
+mkdir -p storage/app/collections
+
+php artisan storage:link
+```
+
+---
+
+# Run the Application
+
+```bash
+php artisan serve
+```
+
+Application URL:
+
+```txt
+http://localhost:8000
+```
+
+---
+
+# API Endpoints
+
+## Collections
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`    | `/api/collections` | List all collections |
-| `POST`   | `/api/collections/upload` | Upload Postman JSON (`multipart/form-data`) |
-| `GET`    | `/api/collections/{id}` | Get collection + all endpoints |
-| `PUT`    | `/api/collections/{id}` | Update name/description |
-| `DELETE` | `/api/collections/{id}` | Delete collection |
+| --- | --- | --- |
+| GET | `/api/collections` | Fetch all collections |
+| POST | `/api/collections/upload` | Upload a Postman collection |
+| GET | `/api/collections/{id}` | Fetch a collection with endpoints |
+| PUT | `/api/collections/{id}` | Update collection details |
+| DELETE | `/api/collections/{id}` | Remove a collection |
 
-### Endpoints (within a collection)
+---
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`    | `/api/collections/{id}/endpoints` | List endpoints (supports `?group=`, `?method=`, `?search=`) |
-| `POST`   | `/api/collections/{id}/endpoints` | Create new endpoint |
-| `GET`    | `/api/collections/{id}/endpoints/{epId}` | Get single endpoint |
-| `PUT`    | `/api/collections/{id}/endpoints/{epId}` | Update endpoint |
-| `DELETE` | `/api/collections/{id}/endpoints/{epId}` | Delete endpoint |
-
-### AI (Ollama)
+## Endpoints
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`    | `/api/ai/status` | Check Ollama server status |
-| `GET`    | `/api/ai/models` | List available local models |
-| `POST`   | `/api/ai/summarize` | Stream AI summary for one endpoint (SSE) |
-| `POST`   | `/api/ai/summarize-collection` | Batch stream AI docs for whole collection (SSE) |
+| --- | --- | --- |
+| GET | `/api/collections/{id}/endpoints` | List endpoints |
+| POST | `/api/collections/{id}/endpoints` | Create endpoint |
+| GET | `/api/collections/{id}/endpoints/{epId}` | Get endpoint |
+| PUT | `/api/collections/{id}/endpoints/{epId}` | Update endpoint |
+| DELETE | `/api/collections/{id}/endpoints/{epId}` | Delete endpoint |
 
-#### POST `/api/ai/summarize` Body
+Supported filters:
+
+```txt
+?group=
+?method=
+?search=
+```
+
+---
+
+## AI Routes
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/api/ai/status` | Check Ollama connection |
+| GET | `/api/ai/models` | List installed models |
+| POST | `/api/ai/summarize` | Generate docs for one endpoint |
+| POST | `/api/ai/summarize-collection` | Generate docs for entire collection |
+
+---
+
+## Example AI Request
+
+`POST /api/ai/summarize`
 
 ```json
 {
@@ -122,7 +186,9 @@ php artisan serve
     "method": "GET",
     "url": "{{base_url}}/api/users/:id",
     "group": "Users",
-    "auth": { "type": "bearer" },
+    "auth": {
+      "type": "bearer"
+    },
     "query": [],
     "body": {},
     "responses": []
@@ -135,71 +201,102 @@ php artisan serve
 
 ---
 
-## 🏗️ Project Structure
+# Project Structure
 
-```
+```txt
 api-docs-laravel/
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── CollectionController.php   # Upload & manage collections
-│   │   │   ├── EndpointController.php     # CRUD for endpoints
-│   │   │   └── OllamaController.php       # AI summary (SSE streaming)
+│   │   │   ├── CollectionController.php
+│   │   │   ├── EndpointController.php
+│   │   │   └── OllamaController.php
 │   │   └── Middleware/
 │   │       └── CorsMiddleware.php
+│   │
 │   └── Services/
-│       ├── OllamaService.php              # Ollama API client (curl streaming)
-│       └── PostmanParserService.php       # Postman JSON → flat endpoints
+│       ├── OllamaService.php
+│       └── PostmanParserService.php
+│
 ├── bootstrap/
-│   └── app.php                            # Laravel 11 app config
+│   └── app.php
+│
 ├── config/
-│   └── ollama.php                         # Ollama config
+│   └── ollama.php
+│
 ├── resources/
 │   └── views/
-│       └── app.blade.php                  # Full SPA frontend
+│       └── app.blade.php
+│
 ├── routes/
-│   ├── api.php                            # API routes
-│   └── web.php                            # SPA catch-all
+│   ├── api.php
+│   └── web.php
+│
 ├── storage/
 │   └── app/
-│       └── collections/                   # JSON storage for collections
+│       └── collections/
+│
 └── .env.example
 ```
 
 ---
 
-## 🤖 How the AI Works
+# How the AI Flow Works
 
-1. User clicks **"Generate AI Documentation"** on any endpoint
-2. Frontend sends a `POST /api/ai/summarize` with the full endpoint data
-3. `OllamaController` builds a structured prompt (similar to Postman AI docs)
-4. `OllamaService` sends to `POST http://localhost:11434/api/generate` with `stream: true`
-5. cURL reads the NDJSON stream and writes SSE events (`data: {"token":"..."}`)
-6. Frontend's `EventSource` / `ReadableStream` receives tokens and renders them live
-7. When complete, the summary is persisted to the collection's JSON file
-
-### Prompt Structure
-
-The AI prompt includes:
-- HTTP method, URL, group/folder
-- Auth type
-- All query parameters and path variables
-- Request body fields (form-data, urlencoded, or raw JSON)
-- Example response body (first 600 chars)
-- Any existing description
-
-Output format mirrors Postman's AI docs: Overview → Use Case → Auth → Parameters → Request Body → Response → Notes.
+1. User clicks **Generate AI Documentation**
+2. Frontend sends endpoint data to the AI route
+3. Laravel builds a structured prompt
+4. Ollama receives the request with streaming enabled
+5. The response streams token-by-token through SSE
+6. The frontend renders the response live
+7. Generated summaries are saved back to the collection JSON
 
 ---
 
-## 🔧 Tips
+# Prompt Design
 
-- **Model choice**: `llama3` gives the best documentation quality. `mistral` is faster. `phi3` for low-RAM machines.
-- **Temperature**: Keep at `0.3` for factual, structured output. Raise to `0.7` for more creative prose.
+The prompt includes:
+
+- HTTP method
+- Endpoint URL
+- Group/folder name
+- Authentication type
+- Query parameters
+- Path variables
+- Request body
+- Example responses
+- Existing endpoint descriptions
+
+Generated output follows a structure similar to Postman AI documentation:
+
+- Overview
+- Use Case
+- Authentication
+- Parameters
+- Request Body
+- Response
+- Notes
+
 ---
 
+# Notes
 
+- `llama3` generally produces the cleanest documentation
+- Lower temperature values work better for structured API docs
+- Streaming works through Server-Sent Events (SSE)
+- Collections are stored locally as JSON for simplicity
 
+---
 
+# Future Improvements
 
+A few things planned for later versions:
 
+- Markdown export
+- OpenAPI/Swagger generation
+
+---
+
+# License
+
+MIT License.
